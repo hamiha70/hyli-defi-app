@@ -8,7 +8,10 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use client_sdk::{contract_indexer::AppError, rest_client::NodeApiHttpClient};
+use client_sdk::{
+    contract_indexer::AppError,
+    rest_client::{NodeApiClient, NodeApiHttpClient},
+};
 use contract1::{Contract1, Contract1Action};
 use contract2::Contract2Action;
 
@@ -160,7 +163,7 @@ async fn send(ctx: RouterCtx, auth: AuthHeaders) -> Result<impl IntoResponse, Ap
 
     let res = ctx
         .client
-        .send_tx_blob(&BlobTransaction::new(identity.clone(), blobs))
+        .send_tx_blob(BlobTransaction::new(identity.clone(), blobs))
         .await;
 
     if let Err(ref e) = res {

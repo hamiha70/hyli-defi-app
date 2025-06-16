@@ -32,4 +32,8 @@ impl TxExecutorHandler for Contract2 {
     ) -> anyhow::Result<Self> {
         Ok(Self::default())
     }
+
+    fn get_state_commitment(&self) -> sdk::StateCommitment {
+        self.commit()
+    }
 }

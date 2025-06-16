@@ -29,9 +29,9 @@ impl sdk::ZkContract for Contract1 {
 }
 
 impl Contract1 {
-    pub fn increment(&mut self) -> Result<String, String> {
+    pub fn increment(&mut self) -> Result<Vec<u8>, String> {
         self.n += 1;
-        Ok(format!("Successfully incremented to {}", self.n))
+        Ok(format!("Successfully incremented to {}", self.n).into_bytes())
     }
 }
 

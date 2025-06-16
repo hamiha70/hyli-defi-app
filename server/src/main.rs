@@ -100,7 +100,6 @@ async fn main() -> Result<()> {
         contract1_cn: args.contract1_cn.clone().into(),
         contract2_cn: args.contract2_cn.clone().into(),
     });
-    let start_height = app_ctx.node_client.get_block_height().await?;
 
     handler.build_module::<AppModule>(app_ctx.clone()).await?;
 
@@ -122,23 +121,25 @@ async fn main() -> Result<()> {
 
     handler
         .build_module::<AutoProver<Contract1>>(Arc::new(AutoProverCtx {
-            start_height,
             data_directory: config.data_directory.clone(),
             prover: Arc::new(Risc0Prover::new(contracts::CONTRACT1_ELF)),
             contract_name: args.contract1_cn.clone().into(),
             node: app_ctx.node_client.clone(),
             default_state: Default::default(),
+            buffer_blocks: config.buffer_blocks,
+            max_txs_per_proof: config.max_txs_per_proof,
         }))
         .await?;
 
     handler
         .build_module::<AutoProver<Contract2>>(Arc::new(AutoProverCtx {
-            start_height,
             data_directory: config.data_directory.clone(),
             prover: Arc::new(Risc0Prover::new(contracts::CONTRACT2_ELF)),
             contract_name: args.contract2_cn.clone().into(),
             node: app_ctx.node_client.clone(),
             default_state: Default::default(),
+            buffer_blocks: config.buffer_blocks,
+            max_txs_per_proof: config.max_txs_per_proof,
         }))
         .await?;
 
