@@ -25,6 +25,7 @@ Currently, only Risc0 contracts are supported.
 From your local Hyli node repository:
 
 ```bash
+git checkout v0.13.0
 RISC0_DEV_MODE=1 cargo run -- --pg
 ```
 
@@ -60,12 +61,15 @@ Contract ELF files are rebuilt automatically when changes are made.
 
 For reproducible builds using Docker:
 
-1. Remove the nonreproducible feature from Cargo.toml in the server package.
-2. Build contracts with:
 ```bash
 cargo build -p contracts --features build --features all
 ```
 
 This ensures builds are consistent across environments.
+
+If you want to build in non-reproducible mode (to test contract compilation):
+```bash
+cargo build -p contracts --features build --features all --features nonreproducible
+```
 
 For more details, refer to the [Hyli documentation](https://docs.hyli.org).
