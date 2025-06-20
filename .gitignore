@@ -1,2 +1,6 @@
 target
 data
+
+# Contract build artifacts
+*.img
+*.txt
