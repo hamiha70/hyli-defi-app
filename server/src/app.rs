@@ -54,18 +54,19 @@ impl Module for AppModule {
             client: ctx.node_client.clone(),
         };
 
-        // Créer un middleware CORS
+        // Create CORS middleware
         let cors = CorsLayer::new()
-            .allow_origin(Any) // Permet toutes les origines (peut être restreint)
-            .allow_methods(vec![Method::GET, Method::POST]) // Permet les méthodes nécessaires
-            .allow_headers(Any); // Permet tous les en-têtes
+            .allow_origin(Any) // Allow all origins (can be restricted)
+            .allow_methods(vec![Method::GET, Method::POST]) // Allow necessary methods
+            .allow_headers(Any); // Allow all headers
 
         let api = Router::new()
             .route("/_health", get(health))
-            .route("/api/increment", post(increment))
+            .route("/api/mint-tokens", post(mint_tokens))
+            .route("/api/test-amm", post(test_amm))
             .route("/api/config", get(get_config))
             .with_state(state)
-            .layer(cors); // Appliquer le middleware CORS
+            .layer(cors); // Apply CORS middleware
 
         if let Ok(mut guard) = ctx.api.router.lock() {
             if let Some(router) = guard.take() {
@@ -117,7 +118,7 @@ impl AuthHeaders {
             .ok_or_else(|| {
                 AppError(
                     StatusCode::UNAUTHORIZED,
-                    anyhow::anyhow!("Missing signature"),
+                    anyhow::anyhow!("Missing user header"),
                 )
             })?;
 
@@ -133,22 +134,52 @@ struct ConfigResponse {
 }
 
 #[derive(serde::Deserialize)]
-struct IncrementRequest {
+struct MintTokensRequest {
     wallet_blobs: [Blob; 2],
+    token: String,
+    amount: u128,
 }
 
+#[derive(serde::Deserialize)]
+struct TestAmmRequest {
+    wallet_blobs: [Blob; 2],
+}
 
 // --------------------------------------------------------
 //     Routes
 // --------------------------------------------------------
 
-async fn increment(
+async fn mint_tokens(
     State(ctx): State<RouterCtx>,
     headers: HeaderMap,
-    Json(request): Json<IncrementRequest>
+    Json(request): Json<MintTokensRequest>
 ) -> Result<impl IntoResponse, AppError> {
     let auth = AuthHeaders::from_headers(&headers)?;
-    send(ctx, auth, request.wallet_blobs).await
+    
+    let action_contract1 = Contract1Action::MintTokens {
+        user: auth.user.clone(),
+        token: request.token,
+        amount: request.amount,
+    };
+    
+    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+}
+
+async fn test_amm(
+    State(ctx): State<RouterCtx>,
+    headers: HeaderMap,
+    Json(request): Json<TestAmmRequest>
+) -> Result<impl IntoResponse, AppError> {
+    let auth = AuthHeaders::from_headers(&headers)?;
+    
+    // Test action: Mint some USDC tokens for testing
+    let action_contract1 = Contract1Action::MintTokens {
+        user: auth.user.clone(),
+        token: "USDC".to_string(),
+        amount: 1000,
+    };
+    
+    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
@@ -157,17 +188,21 @@ async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
     })
 }
 
-async fn send(ctx: RouterCtx, auth: AuthHeaders, wallet_blobs: [Blob; 2]) -> Result<impl IntoResponse, AppError> {
+async fn send_amm_action(
+    ctx: RouterCtx, 
+    auth: AuthHeaders, 
+    wallet_blobs: [Blob; 2],
+    amm_action: Contract1Action
+) -> Result<impl IntoResponse, AppError> {
     let identity = auth.user.clone();
 
-    let action_contract1 = Contract1Action::Increment;
+    // For now, keeping contract2 simple (could be identity verification later)
     let action_contract2 = Contract2Action::Increment;
 
     let mut blobs = wallet_blobs.to_vec();
 
-
     blobs.extend(vec![
-        action_contract1.as_blob(ctx.contract1_cn.clone()),
+        amm_action.as_blob(ctx.contract1_cn.clone()),
         action_contract2.as_blob(ctx.contract2_cn.clone()),
     ]);
 
