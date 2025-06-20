@@ -1,23 +1,20 @@
 import { useState, useEffect } from 'react';
+import { WalletProvider, HyliWallet, useWallet } from "hyli-wallet";
 import './App.css';
+import './WalletStyles.css';
 
 interface ContractState {
-  state: any;
+  state: unknown;
   error?: string;
 }
 
-function App() {
+function ScaffoldApp() {
+  const { logout, wallet, createIdentityBlobs } = useWallet();
   const [contract1State, setContract1State] = useState<ContractState | null>(null);
   const [contract2State, setContract2State] = useState<ContractState | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialResult, setInitialResult] = useState<string | null>(null);
   const [confirmationResult, setConfirmationResult] = useState<string | null>(null);
-  const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
-
-  // Save username to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('username', username);
-  }, [username]);
 
   const fetchContractState = async (contractName: string) => {
     try {
@@ -88,8 +85,8 @@ function App() {
 
   const sendBlobTx = async () => {
     setInitialResult('');
-    if (!username) {
-      setInitialResult('Please enter a username first. e.g. <username>.contract1');
+    if (!wallet?.address) {
+      setInitialResult('Wallet not connected');
       setConfirmationResult(null);
       return;
     }
@@ -97,13 +94,21 @@ function App() {
     setLoading(true);
     setConfirmationResult(null);
     try {
+      // Create identity blobs
+      const [blob0, blob1] = createIdentityBlobs();
+      
+      const headers = new Headers();
+      headers.append('content-type', 'application/json');
+      headers.append('x-user', wallet.address);
+      headers.append('x-session-key', 'test-session');
+      headers.append('x-request-signature', 'test-signature');
+
       const response = await fetch(`${import.meta.env.VITE_SERVER_BASE_URL}/api/increment`, {
         method: 'POST',
-        headers: {
-          'x-user': username,
-          'x-session-key': 'test-session',
-          'x-request-signature': 'test-signature'
-        }
+        headers: headers,
+        body: JSON.stringify({
+          wallet_blobs: [blob0, blob1]
+        })
       });
       
       if (!response.ok) {
@@ -127,14 +132,22 @@ function App() {
 
   return (
     <div className="App">
-      <div className="user-input">
-        <input
-          type="text"
-          placeholder="Enter username: user1@contract1"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="username-input"
-        />
+      <button 
+        className="logout-button"
+        onClick={logout}
+        style={{ position: 'absolute', top: '24px', right: '24px' }}
+      >
+        Logout
+      </button>
+      <div className="app-header">
+        <h1 className="app-title">Hyli Contract Interface</h1>
+        <p className="app-subtitle">Monitor and interact with smart contracts</p>
+      </div>
+      <div className="wallet-info">
+        <div className="wallet-address">
+          <span className="wallet-label">Connected Wallet:</span>
+          <span className="wallet-value">{wallet?.address || 'Not connected'}</span>
+        </div>
       </div>
       <button 
         className="blob-button" 
@@ -165,6 +178,58 @@ function App() {
       </div>
     </div>
   );
+}
+
+function LandingPage() {
+    return (
+        <div className="wallet-page-wrapper">
+            <div className="landing-content-simple">
+                <h1 className="hero-title">
+                    <span className="gradient-text">Hyli</span> App Scaffold
+                </h1>
+                <p className="hero-subtitle">
+                    A starting point for your next blockchain application
+                </p>
+                <HyliWallet
+                    providers={["password", "google", "github"]}
+                />
+            </div>
+            <div className="floating-shapes">
+                <div className="shape shape-1"></div>
+                <div className="shape shape-2"></div>
+                <div className="shape shape-3"></div>
+            </div>
+        </div>
+    );
+}
+
+function AppContent() {
+    const { wallet } = useWallet();
+    
+    if (!wallet) {
+        return <LandingPage />;
+    }
+    
+    return <ScaffoldApp />;
+}
+
+function App() {
+    return (
+        <WalletProvider
+            config={{
+                nodeBaseUrl: import.meta.env.VITE_NODE_BASE_URL,
+                walletServerBaseUrl: import.meta.env.VITE_WALLET_SERVER_BASE_URL,
+                applicationWsUrl: import.meta.env.VITE_WALLET_WS_URL,
+            }}
+            sessionKeyConfig={{
+                duration: 24 * 60 * 60 * 1000, // Session key duration in ms (default: 72h)
+                whitelist: ["contract1", "contract2"], // Required: contracts allowed for session key
+            }}
+            forceSessionKeyCreation={true} // Default: undefined, letting user decide
+        >
+            <AppContent />
+        </WalletProvider>
+    )
 }
 
 export default App;

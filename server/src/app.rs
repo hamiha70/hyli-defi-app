@@ -20,7 +20,7 @@ use hyle_modules::{
     module_bus_client, module_handle_messages,
     modules::{prover::AutoProverEvent, BuildApiContextInner, Module},
 };
-use sdk::{BlobTransaction, ContractName};
+use sdk::{Blob, BlobTransaction, ContractName};
 use serde::Serialize;
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
@@ -132,6 +132,12 @@ struct ConfigResponse {
     contract_name: String,
 }
 
+#[derive(serde::Deserialize)]
+struct IncrementRequest {
+    wallet_blobs: [Blob; 2],
+}
+
+
 // --------------------------------------------------------
 //     Routes
 // --------------------------------------------------------
@@ -139,9 +145,10 @@ struct ConfigResponse {
 async fn increment(
     State(ctx): State<RouterCtx>,
     headers: HeaderMap,
+    Json(request): Json<IncrementRequest>
 ) -> Result<impl IntoResponse, AppError> {
     let auth = AuthHeaders::from_headers(&headers)?;
-    send(ctx, auth).await
+    send(ctx, auth, request.wallet_blobs).await
 }
 
 async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
@@ -150,16 +157,19 @@ async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
     })
 }
 
-async fn send(ctx: RouterCtx, auth: AuthHeaders) -> Result<impl IntoResponse, AppError> {
+async fn send(ctx: RouterCtx, auth: AuthHeaders, wallet_blobs: [Blob; 2]) -> Result<impl IntoResponse, AppError> {
     let identity = auth.user.clone();
 
     let action_contract1 = Contract1Action::Increment;
     let action_contract2 = Contract2Action::Increment;
 
-    let blobs = vec![
+    let mut blobs = wallet_blobs.to_vec();
+
+
+    blobs.extend(vec![
         action_contract1.as_blob(ctx.contract1_cn.clone()),
         action_contract2.as_blob(ctx.contract2_cn.clone()),
-    ];
+    ]);
 
     let res = ctx
         .client
