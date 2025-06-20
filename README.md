@@ -19,17 +19,17 @@ Currently, only Risc0 contracts are supported.
 - Clone [the Hyli node repository](github.com/hyli-org/hyli)
 - Clone this repository
 - [Install RISC-Zero](https://dev.risczero.com/api/zkvm/install)
+- [Install Docker](https://docs.docker.com/compose/install/)
 
 ### 1. Start the Hyli node
 
-From your local Hyli node repository:
+You can run the docker node and the wallet using
 
 ```bash
-git checkout v0.13.0
-RISC0_DEV_MODE=1 cargo run -- --pg
+docker-compose up -d
 ```
 
-This will launch a development-mode node with PostgreSQL persistence.
+This will launch a development-mode node and the wallet server and ui.
 
 ### 2. Start the server
 
