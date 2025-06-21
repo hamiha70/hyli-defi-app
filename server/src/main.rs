@@ -104,10 +104,6 @@ async fn main() -> Result<()> {
 
     handler.build_module::<AppModule>(app_ctx.clone()).await?;
 
-    // Temporarily disabled ContractStateIndexer modules 
-    // These provide debugging/monitoring APIs but require ContractHandler trait
-    // which is implemented in the indexer modules we disabled
-    // 
     handler
         .build_module::<ContractStateIndexer<Contract1>>(ContractStateIndexerCtx {
             contract_name: args.contract1_cn.clone().into(),
@@ -116,13 +112,13 @@ async fn main() -> Result<()> {
         })
         .await?;
 
-    // handler
-    //     .build_module::<ContractStateIndexer<Contract2>>(ContractStateIndexerCtx {
-    //         contract_name: args.contract2_cn.clone().into(),
-    //         data_directory: config.data_directory.clone(),
-    //         api: api_ctx.clone(),
-    //     })
-    //     .await?;
+    handler
+        .build_module::<ContractStateIndexer<Contract2>>(ContractStateIndexerCtx {
+            contract_name: args.contract2_cn.clone().into(),
+            data_directory: config.data_directory.clone(),
+            api: api_ctx.clone(),
+        })
+        .await?;
 
     handler
         .build_module::<AutoProver<Contract1>>(Arc::new(AutoProverCtx {

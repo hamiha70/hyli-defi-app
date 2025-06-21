@@ -196,8 +196,10 @@ async fn send_amm_action(
 ) -> Result<impl IntoResponse, AppError> {
     let identity = auth.user.clone();
 
-    // For now, keeping contract2 simple (could be identity verification later)
-    let action_contract2 = Contract2Action::Increment;
+    // Identity verification: Check if user is allowed (not US citizen/resident)
+    let action_contract2 = Contract2Action::IsUserAllowed {
+        user: auth.user.clone(),
+    };
 
     let mut blobs = wallet_blobs.to_vec();
 
