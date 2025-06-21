@@ -313,6 +313,97 @@ WARN: No previous tx, returning default state cn=contract1 tx_hash=...
 
 ---
 
+## 🧪 **Testing Strategy & Best Practices (New Section)**
+
+Based on our successful implementation of unit tests for the AMM contract, we have questions about recommended testing patterns for Hyli projects:
+
+### **Q14: RISC0 Test Harness Integration**
+**Context**: We successfully implemented 11 unit tests using standard Rust `#[cfg(test)]` patterns that test AMM logic in isolation (mint, swap, liquidity operations, error cases).
+
+**Questions**:
+- **Is there a RISC0-specific test harness** we should be using for zkVM contract testing?
+- **How do RISC0 proving constraints** affect unit testing strategies?
+- **Should we test with RISC0_DEV_MODE=true** for faster iteration, or does this miss important edge cases?
+- **Are there Hyli-specific testing utilities** (similar to Foundry for Ethereum) we should leverage?
+
+**Current Approach**: 
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_swap_calculation() {
+        let mut contract = create_test_contract();
+        // ... pure Rust logic testing
+    }
+}
+```
+
+**Evidence**: Our tests run in **<18 seconds** and provide comprehensive coverage of:
+- ✅ Token minting and balance tracking
+- ✅ Liquidity pool mathematics (constant product formula)
+- ✅ Swap calculations with 0.3% fees
+- ✅ Error conditions (insufficient balance, slippage protection)
+- ✅ Edge cases (nonexistent pools, invalid ratios)
+
+### **Q15: Integration vs Unit Testing Balance**
+**Issue**: Currently we have **two types of testing**:
+1. **Fast unit tests** (18s) - Pure Rust logic, no zkVM overhead
+2. **Slow integration tests** (15-20 min) - Full proof generation via frontend/API
+
+**Questions**:
+- **What's the recommended testing pyramid** for Hyli projects?
+- **When should we use unit tests vs integration tests** vs proof generation tests?
+- **Are there middle-tier tests** (e.g., contract execution without full proof generation)?
+- **How do other Hyli projects** balance testing speed vs completeness?
+
+**Example Split**:
+```
+⚡ Unit Tests (18s):        AMM mathematics, error handling
+🔧 Integration Tests (?):   Contract state transitions  
+🐌 E2E Tests (20min):      Full proof generation + UI
+```
+
+### **Q16: State Transition Testing Patterns**
+**Context**: Our unit tests work on fresh contract instances, but real contracts have persistent state across transactions.
+
+**Questions**:
+- **How to test state persistence** without full blockchain integration?
+- **Can we mock the StateCommitment system** for intermediate testing?
+- **Are there patterns for testing** multi-transaction workflows (e.g., mint → add liquidity → swap)?
+- **How to test state migration** when contract logic changes?
+
+**Current Gap**: We test individual operations but not complex workflows like:
+```
+User Journey: Mint → Add Liquidity → Wait 1 hour → Remove Liquidity → Swap
+```
+
+### **Q17: Performance Testing for AMM Operations**
+**Context**: Our AMM has complex mathematical operations (constant product formula, square roots) that could affect proof generation time.
+
+**Questions**:
+- **Are there profiling tools** for RISC0 contract performance?
+- **How to benchmark** different AMM implementations (e.g., Uniswap v2 vs v3 math)?
+- **What are acceptable performance targets** for proof generation in production?
+- **Should we optimize for proof size** vs execution speed vs gas efficiency?
+
+**Current Metrics**:
+- **API Response**: 1.17s consistently ✅
+- **Contract Execution**: 10-15s ✅  
+- **Proof Generation**: 15-20 minutes ⚠️ (Could be faster?)
+
+### **Q18: Test Data Management and Fixtures**
+**Questions**:
+- **Are there standardized test fixtures** for common DeFi scenarios?
+- **How to generate realistic test data** (e.g., market conditions, user behaviors)?
+- **Should we test with mainnet-like token amounts** (18 decimals) vs simplified amounts?
+- **Are there tools for property-based testing** (fuzzing) with Hyli contracts?
+
+**Current Approach**: Simple hardcoded values (1000 USDC, 2000 ETH) - probably insufficient for production.
+
+---
+
 ## 🎯 **Priority Summary for Hyli Team**
 
 ### **🔴 CRITICAL (UI Blocking Issues)**
@@ -321,25 +412,19 @@ WARN: No previous tx, returning default state cn=contract1 tx_hash=...
 
 ### **🟡 HIGH (Demo Enhancement)**
 3. **Q8: State Persistence/Querying** - Need alternative ways to query AMM state for UI
-4. **Q12: Performance Optimization** - 15-20 minute transactions acceptable but could be faster
-5. **Q11: Dev vs Production Mode** - Need to validate demo environment
+4. **Q14: RISC0 Test Harness** - Essential for reliable development workflow
+5. **Q12: Performance Optimization** - 15-20 minute transactions acceptable but could be faster
 
 ### **🟢 MEDIUM (Future Development)**
-6. **Q9: Transaction Timeouts** - "Timed out" messages despite successful execution
-7. **Q10: Multi-Contract State** - Cross-contract communication patterns
-8. **Q1-Q6: Indexer Functionality** - Background infrastructure questions
+6. **Q15-Q18: Testing Strategy** - Best practices for scalable development
+7. **Q11: Dev vs Production Mode** - Need to validate demo environment
+8. **Q9: Transaction Timeouts** - "Timed out" messages despite successful execution
+9. **Q10: Multi-Contract State** - Cross-contract communication patterns
 
-### **📋 Recommended Hyli Team Action Plan**
-1. **Immediate**: Provide ContractHandler trait implementation example OR alternative state query methods
-2. **Short-term**: Clarify transaction state persistence behavior and warning meanings
-3. **Medium-term**: Review commitment serialization best practices
-4. **Optional**: Performance tuning guidance for demo scenarios
-
-### **🎪 ZKHack Berlin Readiness**
-- **Current Status**: ✅ **AMM fully functional** (4 successful transactions), ⚠️ **State display blocked**
-- **Minimum Viable**: Need Q13 (ContractHandler) OR alternative state queries for complete UI
-- **Optimal**: Resolve Q7, Q8 for smooth user experience
-- **Timeline**: **Ready for ZKHack Berlin** - core functionality proven working
+### **📋 Documentation Priority**
+- **Q14** is most urgent - affects daily development workflow
+- **Q13** is blocking - prevents full indexer functionality
+- **Q15-Q18** are foundational - will guide long-term project architecture
 
 ---
 

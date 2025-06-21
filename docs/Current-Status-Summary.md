@@ -15,6 +15,8 @@
 6. **Working frontend interface** with proper timeout handling (20 minutes)
 7. **Multiple successful token minting operations** with different users
 8. **Consistent proof generation** despite metadata warnings
+9. **Comprehensive unit testing suite** with 11 passing tests covering all AMM operations
+10. **Testing best practices documentation** with questions for Hyli team guidance
 
 ---
 
@@ -186,6 +188,8 @@ WARN: No previous tx, returning default state
 - **Multi-user support** (tested with alice@contract1, bob@contract1, bob@wallet)
 - **Complete documentation** for troubleshooting and architecture
 - **Production-ready patterns** for ZKHack Berlin demo
+- **Comprehensive unit test suite** (11 tests, <18s execution) covering AMM mathematics, error handling, edge cases
+- **Testing strategy framework** with questions for Hyli team to guide best practices
 
 ### **What We're Building Toward**
 - **Privacy-preserving trading** with ZKPassport compliance
