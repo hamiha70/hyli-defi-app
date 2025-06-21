@@ -143,17 +143,26 @@ export const ZKPassportVerifier: React.FC<ZKPassportVerifierProps> = ({
           if (state === 'generating-proof') {
             console.log('⏰ Proof generation timeout - taking too long after 2 minutes');
             setState('error');
-            setErrorMessage('Proof generation is taking too long. Please try again.');
+            setErrorMessage('Proof generation is taking too long. Please try again or check your mobile device.');
             onError('Proof generation timeout');
           }
         }, 120000); // 2 minutes timeout
+        
+        // Add detection for stuck after 3 proofs
+        setTimeout(() => {
+          if (state === 'generating-proof') {
+            console.log('🚨 Potential issue: Still generating after 30 seconds. Check mobile app.');
+          }
+        }, 30000); // 30 seconds warning
       });
 
       onProofGenerated(({ vkeyHash, version, name }: any) => {
-        const newCount = proofCount + 1;
-        setProofCount(newCount);
-        console.log(`🔐 Individual proof generated (${newCount}):`, { name, vkeyHash, version });
-        setCurrentStep(`Generated ${name} proof... (${newCount} proofs completed)`);
+        setProofCount(prev => {
+          const newCount = prev + 1;
+          console.log(`🔐 Individual proof generated (${newCount}):`, { name, vkeyHash, version });
+          setCurrentStep(`Generated ${name} proof... (${newCount} proofs completed)`);
+          return newCount;
+        });
         
         // Add debug info for age-related proofs
         if (name && name.toLowerCase().includes('age')) {
@@ -162,6 +171,9 @@ export const ZKPassportVerifier: React.FC<ZKPassportVerifierProps> = ({
         if (name && name.toLowerCase().includes('compare')) {
           console.log('🎯 COMPARE PROOF DETECTED:', name);
         }
+        
+        // Log all proof names to track what's missing
+        console.log('📋 All proofs so far:', name);
       });
 
       onResult(({ uniqueIdentifier, verified, result }: any) => {
@@ -352,8 +364,15 @@ export const ZKPassportVerifier: React.FC<ZKPassportVerifierProps> = ({
                   <p>⏳ Generating proof... This may take up to 10 seconds</p>
                   <p>📊 Proofs completed: {proofCount}</p>
                   {proofCount >= 3 && (
-                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
-                      <p><strong>🔍 Debug Info:</strong> {proofCount} proofs generated. If this is taking too long, check the console for any errors.</p>
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,165,0,0.2)', borderRadius: '8px', border: '1px solid #ffa500' }}>
+                      <p><strong>⚠️ Status:</strong> {proofCount} proofs completed, waiting for age comparison proof...</p>
+                      <p><strong>💡 Try this:</strong></p>
+                      <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
+                        <li>Check your mobile device - the ZKPassport app might need attention</li>
+                        <li>If the app seems stuck, try closing and reopening it</li>
+                        <li>Ensure your device has enough memory/battery</li>
+                        <li>The age comparison proof can take longer than others</li>
+                      </ul>
                     </div>
                   )}
                 </div>
