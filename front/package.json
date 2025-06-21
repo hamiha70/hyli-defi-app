@@ -12,10 +12,13 @@
   "dependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/elliptic": "^6.4.18",
+    "@types/qrcode": "^1.5.5",
     "@types/react-router-dom": "^5.3.3",
+    "@zkpassport/sdk": "^0.5.5",
     "crypto-js": "^4.2.0",
     "elliptic": "^6.6.1",
     "hyli-wallet": "^0.3.4",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.0"

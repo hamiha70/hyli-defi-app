@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react';
 import { WalletProvider, HyliWallet, useWallet } from "hyli-wallet";
+import { ZKPassportVerifier } from './components/ZKPassportVerifier';
 import './App.css';
 import './WalletStyles.css';
+import './ZKPassportStyles.css';
 
 interface ContractState {
   state: unknown;
   error?: string;
 }
 
-interface TokenBalance {
-  [key: string]: number;
+// interface TokenBalance {
+//   [key: string]: number;
+// }
+
+interface VerificationResult {
+  uniqueIdentifier: string;
+  verified: boolean;
+  ageProof: any;
+  proofData: string;
 }
 
 // Exchange rate constants based on requirements
@@ -43,9 +52,14 @@ function ScaffoldApp() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   
+  // ZKPassport Verification State
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [showVerification, setShowVerification] = useState(false);
+  
   // AMM State
   const [currentUser, setCurrentUser] = useState('bob@wallet');
-  const [tokenBalances, setTokenBalances] = useState<TokenBalance>({});
+  // const [tokenBalances, setTokenBalances] = useState<TokenBalance>({});
   
   // Swap State
   const [swapTokenIn, setSwapTokenIn] = useState('ORANJ');
@@ -61,6 +75,32 @@ function ScaffoldApp() {
 
   const availableTokens = ['ORANJ', 'VITAMINE', 'OXYGENE', 'MELON'];
   const availableUsers = ['bob@wallet', 'alice@contract1', 'charlie@contract1', 'dave@wallet'];
+
+  // ZKPassport verification handlers
+  const handleVerificationComplete = (result: VerificationResult) => {
+    console.log('✅ ZKPassport verification completed:', result);
+    setVerificationResult(result);
+    setIsVerified(true);
+    setShowVerification(false);
+    setResult(`✅ Age verified! Unique ID: ${result.uniqueIdentifier.substring(0, 8)}...`);
+  };
+
+  const handleVerificationError = (error: string) => {
+    console.error('❌ ZKPassport verification error:', error);
+    setResult(`❌ Verification failed: ${error}`);
+    setShowVerification(false);
+  };
+
+  const startVerification = () => {
+    setShowVerification(true);
+    setResult('');
+  };
+
+  const skipVerification = () => {
+    // For development/demo purposes only
+    setIsVerified(true);
+    setResult('⚠️ Verification skipped (demo mode)');
+  };
 
   const fetchContractState = async (contractName: string) => {
     try {
@@ -584,6 +624,111 @@ function ScaffoldApp() {
     );
   };
 
+  // Show ZKPassport verification if user is not verified
+  if (showVerification) {
+    return (
+      <div className="amm-app">
+        <div className="app-header">
+          <h1 className="app-title">
+            <span className="fruit-gradient">Fruit Swap</span> 🍇
+          </h1>
+          <p className="app-subtitle">
+            Powered by <span className="tech-highlight">ZKPassport</span> & <span className="tech-highlight">Boundless</span>
+          </p>
+          <button 
+            className="logout-button"
+            onClick={logout}
+          >
+            Logout 👋
+          </button>
+        </div>
+        
+        <ZKPassportVerifier
+          onVerificationComplete={handleVerificationComplete}
+          onError={handleVerificationError}
+        />
+        
+        {result && <div className="transaction-result">{result}</div>}
+      </div>
+    );
+  }
+
+  // Show compliance gate if user hasn't verified yet
+  if (!isVerified) {
+    return (
+      <div className="amm-app">
+        <div className="app-header">
+          <h1 className="app-title">
+            <span className="fruit-gradient">Fruit Swap</span> 🍇
+          </h1>
+          <p className="app-subtitle">
+            Powered by <span className="tech-highlight">ZKPassport</span> & <span className="tech-highlight">Boundless</span>
+          </p>
+          <button 
+            className="logout-button"
+            onClick={logout}
+          >
+            Logout 👋
+          </button>
+        </div>
+
+        <div className="compliance-gate">
+          <div className="compliance-container">
+            <h2>🛂 Compliance Verification Required</h2>
+            <div className="compliance-info">
+              <p>
+                To trade on this decentralized AMM, you must verify that you are not a US citizen. 
+                This verification is done privately using ZKPassport - we never see your passport data.
+              </p>
+              <div className="compliance-features">
+                <div className="feature">
+                  <span className="feature-icon">🔐</span>
+                  <span>Zero-knowledge proof</span>
+                </div>
+                <div className="feature">
+                  <span className="feature-icon">🛂</span>
+                  <span>Passport verification</span>
+                </div>
+                <div className="feature">
+                  <span className="feature-icon">🚫</span>
+                  <span>No personal data shared</span>
+                </div>
+                <div className="feature">
+                  <span className="feature-icon">⚡</span>
+                  <span>One-time verification</span>
+                </div>
+              </div>
+              
+              <div className="compliance-actions">
+                <button 
+                  className="verify-button"
+                  onClick={startVerification}
+                >
+                  🚀 Start ZKPassport Verification
+                </button>
+                <button 
+                  className="skip-button"
+                  onClick={skipVerification}
+                >
+                  ⚠️ Skip (Demo Mode)
+                </button>
+              </div>
+              
+              <div className="compliance-disclaimer">
+                <p>
+                  <strong>Note:</strong> This verification ensures compliance with financial regulations. 
+                  The proof is generated locally on your device and only confirms your nationality status.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {result && <div className="transaction-result">{result}</div>}
+      </div>
+    );
+  }
+
   return (
     <div className="amm-app">
       {/* Magical background elements */}
@@ -603,12 +748,17 @@ function ScaffoldApp() {
           Powered by <span className="tech-highlight">ZKPassport</span> & <span className="tech-highlight">Boundless</span>
         </p>
         <p className="app-tagline">Privacy-preserving fruit trading with magical zero-knowledge proofs ✨</p>
-        <button 
-          className="logout-button"
-          onClick={logout}
-        >
-          Logout 👋
-        </button>
+        <div className="header-actions">
+          <div className="verification-status">
+            ✅ Verified: {verificationResult?.uniqueIdentifier.substring(0, 8) || 'Demo'}...
+          </div>
+          <button 
+            className="logout-button"
+            onClick={logout}
+          >
+            Logout 👋
+          </button>
+        </div>
       </div>
 
       <div className="user-selector">
