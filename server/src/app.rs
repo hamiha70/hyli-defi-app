@@ -21,7 +21,7 @@ use hyle_modules::{
     modules::{prover::AutoProverEvent, BuildApiContextInner, Module},
 };
 use sdk::{Blob, BlobTransaction, ContractName};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -63,6 +63,11 @@ impl Module for AppModule {
         let api = Router::new()
             .route("/_health", get(health))
             .route("/api/mint-tokens", post(mint_tokens))
+            .route("/api/swap-tokens", post(swap_tokens))
+            .route("/api/add-liquidity", post(add_liquidity))
+            .route("/api/remove-liquidity", post(remove_liquidity))
+            .route("/api/get-user-balance", post(get_user_balance))
+            .route("/api/get-pool-reserves", post(get_pool_reserves))
             .route("/api/test-amm", post(test_amm))
             .route("/api/config", get(get_config))
             .with_state(state)
@@ -133,14 +138,53 @@ struct ConfigResponse {
     contract_name: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 struct MintTokensRequest {
     wallet_blobs: [Blob; 2],
     token: String,
     amount: u128,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
+struct SwapTokensRequest {
+    wallet_blobs: [Blob; 2],
+    token_in: String,
+    token_out: String,
+    amount_in: u128,
+    min_amount_out: u128,
+}
+
+#[derive(Deserialize)]
+struct AddLiquidityRequest {
+    wallet_blobs: [Blob; 2],
+    token_a: String,
+    token_b: String,
+    amount_a: u128,
+    amount_b: u128,
+}
+
+#[derive(Deserialize)]
+struct RemoveLiquidityRequest {
+    wallet_blobs: [Blob; 2],
+    token_a: String,
+    token_b: String,
+    liquidity_amount: u128,
+}
+
+#[derive(Deserialize)]
+struct GetUserBalanceRequest {
+    wallet_blobs: [Blob; 2],
+    token: String,
+}
+
+#[derive(Deserialize)]
+struct GetPoolReservesRequest {
+    wallet_blobs: [Blob; 2],
+    token_a: String,
+    token_b: String,
+}
+
+#[derive(Deserialize)]
 struct TestAmmRequest {
     wallet_blobs: [Blob; 2],
 }
@@ -160,6 +204,89 @@ async fn mint_tokens(
         user: auth.user.clone(),
         token: request.token,
         amount: request.amount,
+    };
+    
+    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+}
+
+async fn swap_tokens(
+    State(ctx): State<RouterCtx>,
+    headers: HeaderMap,
+    Json(request): Json<SwapTokensRequest>
+) -> Result<impl IntoResponse, AppError> {
+    let auth = AuthHeaders::from_headers(&headers)?;
+    
+    let action_contract1 = Contract1Action::SwapExactTokensForTokens {
+        user: auth.user.clone(),
+        token_in: request.token_in,
+        token_out: request.token_out,
+        amount_in: request.amount_in,
+        min_amount_out: request.min_amount_out,
+    };
+    
+    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+}
+
+async fn add_liquidity(
+    State(ctx): State<RouterCtx>,
+    headers: HeaderMap,
+    Json(request): Json<AddLiquidityRequest>
+) -> Result<impl IntoResponse, AppError> {
+    let auth = AuthHeaders::from_headers(&headers)?;
+    
+    let action_contract1 = Contract1Action::AddLiquidity {
+        user: auth.user.clone(),
+        token_a: request.token_a,
+        token_b: request.token_b,
+        amount_a: request.amount_a,
+        amount_b: request.amount_b,
+    };
+    
+    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+}
+
+async fn remove_liquidity(
+    State(ctx): State<RouterCtx>,
+    headers: HeaderMap,
+    Json(request): Json<RemoveLiquidityRequest>
+) -> Result<impl IntoResponse, AppError> {
+    let auth = AuthHeaders::from_headers(&headers)?;
+    
+    let action_contract1 = Contract1Action::RemoveLiquidity {
+        user: auth.user.clone(),
+        token_a: request.token_a,
+        token_b: request.token_b,
+        liquidity_amount: request.liquidity_amount,
+    };
+    
+    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+}
+
+async fn get_user_balance(
+    State(ctx): State<RouterCtx>,
+    headers: HeaderMap,
+    Json(request): Json<GetUserBalanceRequest>
+) -> Result<impl IntoResponse, AppError> {
+    let auth = AuthHeaders::from_headers(&headers)?;
+    
+    let action_contract1 = Contract1Action::GetUserBalance {
+        user: auth.user.clone(),
+        token: request.token,
+    };
+    
+    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+}
+
+async fn get_pool_reserves(
+    State(ctx): State<RouterCtx>,
+    headers: HeaderMap,
+    Json(request): Json<GetPoolReservesRequest>
+) -> Result<impl IntoResponse, AppError> {
+    let auth = AuthHeaders::from_headers(&headers)?;
+    
+    let action_contract1 = Contract1Action::GetReserves {
+        token_a: request.token_a,
+        token_b: request.token_b,
     };
     
     send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await

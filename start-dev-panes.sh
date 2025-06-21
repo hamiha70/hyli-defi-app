@@ -15,6 +15,10 @@ fi
 
 echo "🚀 Setting up Hyli DeFi development environment with 4 panes..."
 
+# Clean up port conflicts first (requires sudo password once)
+echo "🔧 Cleaning up port conflicts..."
+./cleanup-ports.sh
+
 # Create new tmux session with first pane
 tmux new-session -d -s $SESSION_NAME -c $PROJECT_DIR
 
@@ -59,6 +63,7 @@ tmux send-keys -t $SESSION_NAME:0.0 "echo '  docker-compose up'" C-m
 tmux send-keys -t $SESSION_NAME:0.0 "echo '  docker-compose down'" C-m
 tmux send-keys -t $SESSION_NAME:0.0 "echo '  docker-compose down --volumes --remove-orphans'" C-m
 tmux send-keys -t $SESSION_NAME:0.0 "echo ''" C-m
+tmux send-keys -t $SESSION_NAME:0.0 "echo '✅ Port conflicts cleaned up automatically'" C-m
 tmux send-keys -t $SESSION_NAME:0.0 "echo '▶️  Starting services...'" C-m
 tmux send-keys -t $SESSION_NAME:0.0 "docker-compose up" C-m
 

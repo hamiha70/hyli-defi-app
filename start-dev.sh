@@ -15,6 +15,10 @@ fi
 
 echo "🚀 Setting up Hyli DeFi development environment..."
 
+# Clean up port conflicts first (requires sudo password once)
+echo "🔧 Cleaning up port conflicts..."
+./cleanup-ports.sh
+
 # Create new tmux session (detached)
 tmux new-session -d -s $SESSION_NAME -c $PROJECT_DIR
 
@@ -26,6 +30,7 @@ tmux send-keys -t $SESSION_NAME:0 "echo '  docker-compose up     # Start all ser
 tmux send-keys -t $SESSION_NAME:0 "echo '  docker-compose down   # Stop services'" C-m
 tmux send-keys -t $SESSION_NAME:0 "echo '  docker-compose down --volumes --remove-orphans # Full reset'" C-m
 tmux send-keys -t $SESSION_NAME:0 "echo ''" C-m
+tmux send-keys -t $SESSION_NAME:0 "echo '✅ Port conflicts cleaned up automatically'" C-m
 tmux send-keys -t $SESSION_NAME:0 "echo '▶️  Starting Docker services...'" C-m
 tmux send-keys -t $SESSION_NAME:0 "docker-compose up" C-m
 

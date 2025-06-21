@@ -17,6 +17,13 @@
 
 ## 🏗️ **Technical Documentation**
 
+### **⚡ [Development Workflow Guide](./Development-Workflow-Guide.md)**
+**⭐ Essential daily development workflows and automation**
+- Optimal workflows for contract vs UI changes
+- Automated port conflict resolution
+- tmux script comparison and usage
+- Speed optimization and troubleshooting
+
 ### **🔧 [AMM Contract Architecture](./AMM-Contract-Architecture.md)**
 **Complete technical specification of the AMM implementation**
 - Hybrid token management approach
@@ -55,10 +62,11 @@
 ## 📖 **How to Use This Documentation**
 
 ### **For Developers**
-1. **Start with**: [Current Status Summary](./Current-Status-Summary.md) - Overview of what's working
-2. **Then read**: [Development Guide](./Development-Debugging-Guide.md) - How to build and debug
-3. **Reference**: [AMM Architecture](./AMM-Contract-Architecture.md) - Understanding the contracts
-4. **Plan ahead**: [Integration Guide](./LLM-Hyli-ZKPassport-Boundless.md) - ZKPassport integration
+1. **Start with**: [Development Workflow Guide](./Development-Workflow-Guide.md) - ⭐ **ESSENTIAL!** Daily development workflows
+2. **Overview**: [Current Status Summary](./Current-Status-Summary.md) - What's working and what's next
+3. **Debugging**: [Development Guide](./Development-Debugging-Guide.md) - Error solutions and troubleshooting
+4. **Architecture**: [AMM Architecture](./AMM-Contract-Architecture.md) - Understanding the contracts
+5. **Integration**: [Integration Guide](./LLM-Hyli-ZKPassport-Boundless.md) - ZKPassport integration
 
 ### **For Troubleshooting**
 1. **Check**: [Development Guide](./Development-Debugging-Guide.md) - Common errors and solutions
