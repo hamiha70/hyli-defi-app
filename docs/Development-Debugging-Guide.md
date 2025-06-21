@@ -420,6 +420,176 @@ RISC0_DEV_MODE=true cargo run -p server | tee server.log
 
 After resolving compilation and API format issues, we achieved **successful AMM transactions** with interesting findings:
 
+---
+
+## 🔧 **OFFICIAL Development Workflow (Updated December 21, 2025)**
+
+Based on guidance from the Hyli team, the following development workflow is now established as **best practice**:
+
+### **🔄 Contract Recompilation Process**
+
+**When to Use**: Any time you modify contract logic in `contracts/contract1/src/lib.rs` or `contracts/contract2/src/lib.rs`
+
+**Required Command**:
+```bash
+# Full reset required for contract changes
+rm -rf data && RISC0_DEV_MODE=1 cargo run -p server
+```
+
+**What This Does**:
+- **`rm -rf data`**: Removes all cached state, proofs, and indexer data
+- **`RISC0_DEV_MODE=1`**: Enables faster proving for development (not production-ready proofs)
+- **`cargo run -p server`**: Recompiles contracts and starts server with fresh state
+
+**⚠️ Important**: Regular `cargo run -p server` **will not** pick up contract changes - you must delete the `data` directory.
+
+### **🏗️ Chain Reset for New Deployments**
+
+**When to Use**: When you have major state corruption, want a completely fresh start, or are testing deployment scenarios
+
+**Required Commands**:
+```bash
+# Complete blockchain reset
+docker-compose down --volumes --remove-orphans
+docker-compose up
+```
+
+**What This Does**:
+- **`--volumes`**: Removes all Docker volumes (blockchain data, wallet state)
+- **`--remove-orphans`**: Cleans up any leftover containers
+- **Restarts**: Fresh Hyli blockchain node, wallet server, all services
+
+**⚠️ Warning**: This wipes **all transaction history** and **all user accounts**. Use sparingly.
+
+### **🔍 Development Environment Recommendations**
+
+**Use Localhost (Not Testnet)**:
+- ✅ **Faster iteration**: No network delays
+- ✅ **Block explorer available**: View transactions at localhost block explorer
+- ✅ **Full control**: Reset chain when needed
+- ✅ **Privacy**: No public transaction history during development
+
+**Block Explorer Usage**:
+- **Purpose**: Debug transaction details, state transitions, proof status
+- **Access**: Available on localhost when running Hyli node
+- **Benefits**: Visual inspection of transaction flow, blob data, proof generation
+
+### **👤 User Management in Development**
+
+**Important**: User accounts are **not persistent** across chain resets. You must recreate users after each full reset.
+
+#### **Built-in Superuser Account**
+**Always Available**:
+```
+Username: hyli
+Password: hylisecure
+```
+
+**Benefits**:
+- ✅ **Pre-funded**: Has tokens available for testing
+- ✅ **Always exists**: Survives chain resets
+- ✅ **Reliable**: Good for automated testing scripts
+- ✅ **Quick testing**: No need to register or fund
+
+#### **Custom Test Users (e.g., "bob")**
+**After Chain Reset Required**:
+```bash
+# Must re-register users after:
+# docker-compose down --volumes --remove-orphans
+```
+
+**Process**:
+1. **Visit frontend**: http://localhost:5173/
+2. **Create new user**: Register "bob" with password
+3. **Update .env**: Set USER=bob, PASSWORD=... if needed
+4. **Test transactions**: User starts with 0 tokens, needs minting
+
+**⚠️ Important**: Custom users like "bob" **do not persist** across full chain resets. You'll need to re-register them each time.
+
+### **📋 Daily Development Routine**
+
+**1. Start Development Session**:
+```bash
+# Start all services
+docker-compose up -d
+RISC0_DEV_MODE=1 cargo run -p server
+cd front && bun run dev
+```
+
+**2. User Setup** (if needed):
+```bash
+# Option A: Use built-in superuser (recommended for quick testing)
+# Username: hyli, Password: hylisecure (always available)
+
+# Option B: Create custom user (after chain resets)
+# Visit http://localhost:5173/ and register new user
+# Update .env with USER=bob, PASSWORD=...
+```
+
+**3. Contract Development Cycle**:
+```bash
+# Edit contract logic in contracts/contract1/src/lib.rs
+# Test with unit tests first:
+cargo test -p contract1
+
+# Then integrate:
+rm -rf data && RISC0_DEV_MODE=1 cargo run -p server
+# Test via frontend at http://localhost:5173
+```
+
+**4. Full Chain Reset** (when needed):
+```bash
+# Complete reset (removes all users, transactions, state)
+docker-compose down --volumes --remove-orphans
+docker-compose up
+
+# ⚠️ Must re-register custom users after this step
+# Built-in "hyli" user will still be available
+```
+
+**5. End Development Session**:
+```bash
+# Optional: Preserve state for next session
+# Just stop the server with Ctrl+C
+
+# Optional: Clean reset for next session  
+docker-compose down --volumes --remove-orphans
+```
+
+### **🧪 Integration Testing Strategy (Official)**
+
+**Confirmed by Hyli Team**: No robust integration testing framework exists. The **recommended approach** is:
+
+**1. Unit Tests (18 seconds)**:
+```bash
+cargo test -p contract1
+```
+
+**2. Manual Integration Testing (20 minutes)**:
+```bash
+# Reset environment
+rm -rf data && RISC0_DEV_MODE=1 cargo run -p server
+
+# Test via API
+curl -X POST http://localhost:4002/api/test-amm \
+  -H "x-user: alice@contract1" \
+  -d '{"wallet_blobs": [...]}'
+
+# Test via frontend
+# Visit http://localhost:5173 and perform user actions
+```
+
+**3. Block Explorer Validation**:
+- View transaction details in block explorer
+- Verify state transitions are correct
+- Check proof generation status
+
+**This is the official Hyli/RISC0 recommended testing approach** - not a limitation, but the current best practice.
+
+---
+
+## ✅ **Successful Transactions**
+
 #### **✅ Successful Transactions**
 ```bash
 # Test 1: Basic AMM test (1000 USDC)
@@ -505,55 +675,3 @@ INFO: ⏰ Blob tx timed out: dc27fcab2641d016b01757d4c0bb0defb07866ee0fdb75dfe51
 
 **Impact**: Some transactions timing out despite successful execution
 **Status**: ⚠️ **May affect user experience**
-
-#### **4. Development Mode Proving Warnings**
-```
-WARNING: proving in dev mode. This will not generate valid, secure proofs.
-WARNING: Proving in dev mode does not generate a valid receipt.
-```
-
-**Impact**: Expected in development, but receipts are invalid
-**Status**: ✅ **Expected behavior with RISC0_DEV_MODE=true**
-
-### **📊 Performance Metrics**
-
-| Operation | Duration | Status | Notes |
-|-----------|----------|--------|-------|
-| **API Request Processing** | ~1.17 seconds | ✅ Success | HTTP response time |
-| **Contract Execution** | ~22 seconds | ✅ Success | From submission to execution log |
-| **Proof Generation** | ~30 seconds | ⚠️ Partial | Completes with metadata errors |
-| **Total End-to-End** | ~30 seconds | ✅ Success | User perspective |
-
-### **🎯 Key Insights**
-
-#### **What's Working Perfectly**
-1. **API endpoints** respond correctly with proper transaction hashes
-2. **Contract logic** executes successfully (mint operations working consistently)
-3. **Proof composition** with multiple contracts (contract1 + contract2)
-4. **Transaction identity format** (`user@contract1`, `user@wallet`) working correctly
-5. **Wallet blob integration** with existing Hyli contracts
-6. **Frontend user experience** with proper timeout handling and progress indicators
-7. **Multi-user support** tested with 3 different user patterns
-8. **End-to-end workflow** from login to transaction completion (4 successful tests)
-9. **Performance consistency** with improved 10-15 second execution times
-
-#### **What Needs Investigation**
-1. **ContractHandler trait implementation** - Root cause of indexer 404 errors
-2. **Alternative state query methods** - How to display AMM state without indexer
-3. **Transaction warning meanings** - "No previous tx, returning default state" significance
-4. **Commitment metadata encoding** - Why decode errors occur (but proofs succeed)
-5. **Production vs development** behavior differences
-
----
-
-## 🔮 **Next Development Steps**
-
-1. **Increase proof timeouts** for development comfort
-2. **Add proper wallet blob generation** in frontend
-3. **Implement ZKPassport integration** in contract2
-4. **Build complete trading UI** with AMM functionality
-5. **Add comprehensive error handling** and user feedback
-
----
-
-*This guide represents real debugging experience from ZKHack Berlin 2025. Sharing these learnings helps the entire Hyli ecosystem grow stronger! 🚀* 

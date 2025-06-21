@@ -13,7 +13,7 @@ use hyle_modules::{
     bus::{metrics::BusMetrics, SharedMessageBus},
     modules::{
         // Temporarily disabled indexer functionality
-        // contract_state_indexer::{ContractStateIndexer, ContractStateIndexerCtx},
+        contract_state_indexer::{ContractStateIndexer, ContractStateIndexerCtx},
         da_listener::{DAListener, DAListenerConf},
         prover::{AutoProver, AutoProverCtx},
         rest::{RestApi, RestApiRunContext},
@@ -108,13 +108,13 @@ async fn main() -> Result<()> {
     // These provide debugging/monitoring APIs but require ContractHandler trait
     // which is implemented in the indexer modules we disabled
     // 
-    // handler
-    //     .build_module::<ContractStateIndexer<Contract1>>(ContractStateIndexerCtx {
-    //         contract_name: args.contract1_cn.clone().into(),
-    //         data_directory: config.data_directory.clone(),
-    //         api: api_ctx.clone(),
-    //     })
-    //     .await?;
+    handler
+        .build_module::<ContractStateIndexer<Contract1>>(ContractStateIndexerCtx {
+            contract_name: args.contract1_cn.clone().into(),
+            data_directory: config.data_directory.clone(),
+            api: api_ctx.clone(),
+        })
+        .await?;
 
     // handler
     //     .build_module::<ContractStateIndexer<Contract2>>(ContractStateIndexerCtx {

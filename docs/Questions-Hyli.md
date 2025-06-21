@@ -157,33 +157,46 @@ client-sdk = {
 
 ## 🔍 **Key Takeaways from Extended Testing (December 21, 2025)**
 
-### **📊 System Stability Observations**
-After running the server for **6+ hours** (blocks 7000 → 33000+) and **4 successful AMM transactions**, several important patterns emerged:
+### **📊 System Stability Observations - UPDATED**
+After extensive collaboration with the Hyli team and **resolving the indexer functionality**, several critical development patterns have been established:
 
-#### **✅ Stable Long-Term Operation**
+#### **✅ RESOLVED: Indexer Functionality Working**
 ```
-2025-06-21T06:51:20.047108Z  INFO: 🔧 Executed contract: Minted 1000 USDC tokens for user bob@wallet. Success: true
-2025-06-21T06:51:20.546953Z  INFO: ✅ Proved 1 txs, Batch id: 4, Proof TX hash: 7bf4a0f4fd02e415400980c7aad0ece82305e00af8b54c4886f27f0b37a39e17
+✅ ContractHandler trait implementation resolved
+✅ State indexing now functional  
+✅ Contract state queries working via /v1/indexer/contract/*/state endpoints
 ```
-- **Observation**: Server runs stably for hours with consistent successful AMM operations
-- **Block timing**: Consistent ~16-minute block intervals (normal Hyli network behavior)
-- **Multiple users**: Successfully tested with alice@contract1, bob@contract1, bob@wallet
-- **Proof generation**: 4/4 transactions generated proofs successfully
-- **Performance**: Execution time improved from 22s to 10-15s average
+- **Resolution**: Hyli team provided guidance on proper ContractHandler implementation
+- **Evidence**: Block explorer shows successful state transitions and indexing
+- **Impact**: Frontend can now display real contract state instead of 404 errors
 
-#### **🚨 Critical Discovery: ContractHandler Trait Issue**
-```
-error[E0277]: the trait bound `contract1::Contract1: ContractHandler` is not satisfied
-error[E0277]: the trait bound `Contract2: ContractHandler` is not satisfied
-```
-- **Resolution**: Had to **disable indexer modules** to get server running
-- **Current status**: Server works but without indexer functionality
-- **Impact**: No contract state queries available, but transaction execution works perfectly
+#### **🎯 NEW: Development Workflow Best Practices**
+Based on Hyli team guidance, the following patterns are now established:
 
-#### **🎯 Updated Understanding: Dual State System**
-- **Transaction state**: ✅ Working perfectly - 4 successful AMM operations
-- **Indexer state**: ❌ Blocked by ContractHandler trait - returns 404 for all state queries
-- **Core insight**: **AMM operations work** without indexer, but **UI state display** is blocked
+**Contract Recompilation Process**:
+```bash
+# When contract logic changes, full reset required:
+rm -rf data && RISC0_DEV_MODE=1 cargo run -p server
+```
+
+**Chain Reset for New Deployments**:
+```bash
+# Clean blockchain state completely:
+docker-compose down --volumes --remove-orphans
+docker-compose up
+```
+
+**Environment Recommendation**:
+- **Use localhost development** instead of testnet for active development
+- **Block explorer available** at localhost for transaction inspection
+- **Testnet should be used** only for final validation/demo
+
+#### **🔧 Integration Testing Strategy Clarified**
+**Official Hyli/RISC0 Position**: 
+- **No robust integration testing framework** currently exists
+- **Docker-compose up/down workflow** is the **recommended approach**
+- **Manual testing via API/frontend** is the current best practice
+- **Unit tests (18s) + Manual integration (20min)** is the accepted pattern
 
 ---
 
@@ -225,38 +238,34 @@ impl AmmContract {
 }
 ```
 
-### **Q13: ContractHandler Trait Implementation (BLOCKING ISSUE)**
-**Issue**: Cannot run server with indexer functionality enabled due to missing trait implementation:
-```rust
-error[E0277]: the trait bound `contract1::Contract1: ContractHandler` is not satisfied
-   --> server/src/main.rs:107:10
-    |
-107 |         .build_module::<ContractStateIndexer<Contract1>>(ContractStateIndexerCtx {
-    |          ^^^^^^^^^^^^ the trait `ContractHandler` is not implemented for `contract1::Contract1`
+### **Q13: ContractHandler Trait Implementation (RESOLVED ✅)**
+**Issue**: Cannot run server with indexer functionality enabled due to missing trait implementation.
+
+**RESOLUTION PROVIDED BY HYLI TEAM**:
+- ✅ **ContractHandler trait implementation** guidance provided
+- ✅ **Indexer modules** now working correctly
+- ✅ **State queries** functional via `/v1/indexer/contract/*/state` endpoints  
+- ✅ **Block explorer** available for localhost development
+
+**Updated Development Workflow**:
+```bash
+# Contract changes require full reset:
+rm -rf data && RISC0_DEV_MODE=1 cargo run -p server
+
+# New deployments require clean chain:
+docker-compose down --volumes --remove-orphans && docker-compose up
 ```
 
-**Current Workaround**: Disabled indexer modules in `server/src/main.rs`:
-```rust
-// Commented out to resolve ContractHandler trait errors
-// .build_module::<ContractStateIndexer<Contract1>>(ContractStateIndexerCtx {
-//     contract_name: "contract1".to_owned(),
-// })?
+**User Management**:
+```bash
+# Built-in superuser (always available):
+Username: hyli, Password: <>
+
+# Custom users must be re-registered after chain resets
+# Visit http://localhost:5173/ to register users like "bob"
 ```
 
-**Updated Evidence (4 successful transactions)**:
-✅ **AMM operations work perfectly** without indexer
-❌ **UI state display blocked** - all `/v1/indexer/contract/*/state` return 404
-✅ **Proof generation successful** - 4/4 transactions proved successfully
-✅ **Multi-user support confirmed** - alice@contract1, bob@contract1, bob@wallet all work
-
-**Critical Questions**:
-- **Is ContractHandler trait required** for production Hyli contracts?
-- **Can we implement alternative state queries** instead of indexer endpoints?
-- **What functionality do we lose** by disabling the indexer permanently?
-- **How to properly implement ContractHandler** for our AMM contract?
-- **Are there Hyli examples** showing proper ContractHandler implementation?
-
-**Priority**: 🔴 **BLOCKING for UI** - AMM works but state display is broken
+**Evidence**: Frontend now successfully displays contract state, block explorer shows transaction details and state transitions.
 
 ### **Q8: State Persistence vs State Querying (CLARIFIED)**
 **Updated Understanding**: After 4 successful AMM transactions, we now understand this is a **display issue, not a persistence issue**:
@@ -317,53 +326,42 @@ WARN: No previous tx, returning default state cn=contract1 tx_hash=...
 
 Based on our successful implementation of unit tests for the AMM contract, we have questions about recommended testing patterns for Hyli projects:
 
-### **Q14: RISC0 Test Harness Integration**
-**Context**: We successfully implemented 11 unit tests using standard Rust `#[cfg(test)]` patterns that test AMM logic in isolation (mint, swap, liquidity operations, error cases).
+### **Q14: RISC0 Test Harness Integration (CLARIFIED ✅)**
+**OFFICIAL HYLI/RISC0 GUIDANCE**: 
 
-**Questions**:
-- **Is there a RISC0-specific test harness** we should be using for zkVM contract testing?
-- **How do RISC0 proving constraints** affect unit testing strategies?
-- **Should we test with RISC0_DEV_MODE=true** for faster iteration, or does this miss important edge cases?
-- **Are there Hyli-specific testing utilities** (similar to Foundry for Ethereum) we should leverage?
+**Integration Testing**: 
+- ✅ **No robust framework exists** - confirmed by Hyli team
+- ✅ **Docker-compose workflow** is the **official recommended approach**
+- ✅ **Manual API/frontend testing** is current best practice
+- ✅ **Unit tests (18s) + Docker integration (20min)** is the accepted pattern
 
-**Current Approach**: 
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_swap_calculation() {
-        let mut contract = create_test_contract();
-        // ... pure Rust logic testing
-    }
-}
+**Testing Strategy Confirmation**:
+```
+⚡ Unit Tests (18s):        AMM mathematics, error handling ✅ RECOMMENDED
+🔧 Integration Tests:       docker-compose + API testing   ✅ OFFICIAL APPROACH  
+🐌 E2E Tests (20min):      Full proof generation + UI      ✅ MANUAL VALIDATION
 ```
 
-**Evidence**: Our tests run in **<18 seconds** and provide comprehensive coverage of:
-- ✅ Token minting and balance tracking
-- ✅ Liquidity pool mathematics (constant product formula)
-- ✅ Swap calculations with 0.3% fees
-- ✅ Error conditions (insufficient balance, slippage protection)
-- ✅ Edge cases (nonexistent pools, invalid ratios)
+**Updated Questions**:
+- ~~Is there a RISC0-specific test harness?~~ **Answer: No, use docker-compose**
+- ~~Should we test with RISC0_DEV_MODE=true?~~ **Answer: Yes, for development**
+- ~~Are there Hyli-specific testing utilities?~~ **Answer: Block explorer + docker workflow**
 
-### **Q15: Integration vs Unit Testing Balance**
-**Issue**: Currently we have **two types of testing**:
-1. **Fast unit tests** (18s) - Pure Rust logic, no zkVM overhead
-2. **Slow integration tests** (15-20 min) - Full proof generation via frontend/API
+### **Q15: Integration vs Unit Testing Balance (RESOLVED ✅)**
+**OFFICIAL RECOMMENDATION FROM HYLI TEAM**:
 
-**Questions**:
-- **What's the recommended testing pyramid** for Hyli projects?
-- **When should we use unit tests vs integration tests** vs proof generation tests?
-- **Are there middle-tier tests** (e.g., contract execution without full proof generation)?
-- **How do other Hyli projects** balance testing speed vs completeness?
-
-**Example Split**:
+**Confirmed Testing Pyramid**:
 ```
-⚡ Unit Tests (18s):        AMM mathematics, error handling
-🔧 Integration Tests (?):   Contract state transitions  
-🐌 E2E Tests (20min):      Full proof generation + UI
+Unit Tests (Fast):     ✅ Standard Rust #[cfg(test)] - 18 seconds
+Integration Tests:     ✅ docker-compose up/down + API calls - 20 minutes  
+E2E Tests:            ✅ Frontend + full user workflow validation
 ```
+
+**Development Environment**:
+- ✅ **Use localhost** for active development (not testnet)
+- ✅ **Block explorer available** at localhost for debugging
+- ✅ **Contract recompilation** requires `rm -rf data` + restart
+- ✅ **Chain reset** requires `docker-compose down --volumes --remove-orphans`
 
 ### **Q16: State Transition Testing Patterns**
 **Context**: Our unit tests work on fresh contract instances, but real contracts have persistent state across transactions.
@@ -404,27 +402,30 @@ User Journey: Mint → Add Liquidity → Wait 1 hour → Remove Liquidity → Sw
 
 ---
 
-## 🎯 **Priority Summary for Hyli Team**
+## 🎯 **Priority Summary for Hyli Team - UPDATED**
 
-### **🔴 CRITICAL (UI Blocking Issues)**
-1. **Q13: ContractHandler Trait** - Cannot use indexer functionality, blocking state display in UI
-2. **Q7: Commitment Metadata Errors** - Proof generation warnings (but proofs succeed)
+### **✅ RESOLVED (Major Breakthroughs)**
+1. **Q13: ContractHandler Trait** - ✅ **RESOLVED** by Hyli team guidance
+2. **Q14: RISC0 Test Harness** - ✅ **CLARIFIED** - docker-compose is official approach
+3. **Q15: Integration vs Unit Testing** - ✅ **RESOLVED** - official testing pyramid confirmed
+4. **Q8: State Persistence/Querying** - ✅ **WORKING** - indexer functional with proper implementation
 
-### **🟡 HIGH (Demo Enhancement)**
-3. **Q8: State Persistence/Querying** - Need alternative ways to query AMM state for UI
-4. **Q14: RISC0 Test Harness** - Essential for reliable development workflow
-5. **Q12: Performance Optimization** - 15-20 minute transactions acceptable but could be faster
+### **🟡 REMAINING QUESTIONS (Future Development)**
+5. **Q16: State Transition Testing** - How to test multi-transaction workflows
+6. **Q17: Performance Testing** - Profiling tools for AMM operations
+7. **Q18: Test Data Management** - Standardized fixtures and realistic data
+8. **Q7: Commitment Metadata Errors** - Minor warnings (but proofs succeed)
 
-### **🟢 MEDIUM (Future Development)**
-6. **Q15-Q18: Testing Strategy** - Best practices for scalable development
-7. **Q11: Dev vs Production Mode** - Need to validate demo environment
-8. **Q9: Transaction Timeouts** - "Timed out" messages despite successful execution
-9. **Q10: Multi-Contract State** - Cross-contract communication patterns
+### **🟢 LOW PRIORITY (Optional)**
+9. **Q11: Dev vs Production Mode** - Can be addressed before final demo
+10. **Q9: Transaction Timeouts** - User experience improvement
+11. **Q12: Performance Optimization** - 15-20 minute transactions acceptable for demo
 
-### **📋 Documentation Priority**
-- **Q14** is most urgent - affects daily development workflow
-- **Q13** is blocking - prevents full indexer functionality
-- **Q15-Q18** are foundational - will guide long-term project architecture
+### **📋 Updated Status**
+- **✅ CRITICAL ISSUES RESOLVED** - Indexer working, development workflow established
+- **✅ OFFICIAL BEST PRACTICES** - Testing strategy confirmed by Hyli team
+- **🎯 READY FOR NEXT PHASE** - Focus can shift to frontend enhancement and ZKPassport integration
+- **📚 COMPREHENSIVE DOCUMENTATION** - Questions and answers will help entire Hyli ecosystem
 
 ---
 

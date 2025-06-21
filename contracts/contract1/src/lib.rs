@@ -6,9 +6,9 @@ use sdk::RunResult;
 
 #[cfg(feature = "client")]
 pub mod client;
-// Temporarily disabled indexer module to avoid missing feature dependency
-// #[cfg(feature = "client")]
-// pub mod indexer;
+// Temporarily disabled indexer module to avoid missing feature dpendency
+#[cfg(feature = "client")]
+pub mod indexer;
 
 impl sdk::ZkContract for AmmContract {
     /// Entry point of the contract's logic
