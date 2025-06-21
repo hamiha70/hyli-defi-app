@@ -352,6 +352,10 @@ body {
   opacity: 1;
 }
 
+.dashboard-card.full-width {
+  grid-column: 1 / -1;
+}
+
 /* ========================================
    Balance Card - Enhanced
 ======================================== */
