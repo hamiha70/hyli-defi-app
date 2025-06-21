@@ -226,7 +226,7 @@ async fn send_amm_action(
         AppModuleBusClient::new_from_bus(bus.new_handle()).await
     };
 
-    tokio::time::timeout(Duration::from_secs(5), async {
+    tokio::time::timeout(Duration::from_secs(30), async {
         loop {
             match bus.recv().await? {
                 AutoProverEvent::<Contract1>::SuccessTx(sequenced_tx_hash, _) => {

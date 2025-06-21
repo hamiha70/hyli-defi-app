@@ -55,8 +55,11 @@ function ScaffoldApp() {
   }, []);
 
   const pollTransactionStatus = async (txHash: string): Promise<void> => {
-    const maxAttempts = 30; // 30 seconds timeout
+    const maxAttempts = 1200; // 20 minutes timeout
     let attempts = 0;
+    
+    // Update confirmation result to show progress
+    setConfirmationResult(`Transaction submitted! Executing contract and generating proof... (Hash: ${txHash})`);
     
     while (attempts < maxAttempts) {
       try {
@@ -67,8 +70,14 @@ function ScaffoldApp() {
         
         const data = await response.json();
         if (data.transaction_status === "Success") {
-          setConfirmationResult(`Transaction confirmed successful! Hash: ${txHash}`);
+          setConfirmationResult(`✅ AMM Transaction confirmed successful! Tokens minted. Hash: ${txHash}`);
           return;
+        }
+        
+        // Update progress every 30 seconds
+        if (attempts % 30 === 0 && attempts > 0) {
+          const minutes = Math.floor(attempts / 60);
+          setConfirmationResult(`⏳ Still processing... (${minutes}m elapsed) - Contract execution and proof generation in progress. Hash: ${txHash}`);
         }
         
         // Wait 1 second before next attempt
@@ -80,7 +89,7 @@ function ScaffoldApp() {
       }
     }
     
-    setConfirmationResult(`Transaction ${txHash} timed out after ${maxAttempts} seconds`);
+    setConfirmationResult(`⚠️ Transaction ${txHash} polling timed out after ${Math.floor(maxAttempts/60)} minutes. Transaction may still be processing - check server logs.`);
   };
 
   const sendBlobTx = async () => {
@@ -103,7 +112,7 @@ function ScaffoldApp() {
       headers.append('x-session-key', 'test-session');
       headers.append('x-request-signature', 'test-signature');
 
-      const response = await fetch(`${import.meta.env.VITE_SERVER_BASE_URL}/api/increment`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_BASE_URL}/api/test-amm`, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
@@ -117,7 +126,7 @@ function ScaffoldApp() {
       }
 
       const data = await response.json();
-      setInitialResult(`Transaction sent! Hash: ${JSON.stringify(data)}`);
+      setInitialResult(`AMM Transaction submitted! Minting tokens... Hash: ${JSON.stringify(data)}`);
       
       // Start polling for transaction status
       await pollTransactionStatus(data);
@@ -140,8 +149,8 @@ function ScaffoldApp() {
         Logout
       </button>
       <div className="app-header">
-        <h1 className="app-title">Hyli Contract Interface</h1>
-        <p className="app-subtitle">Monitor and interact with smart contracts</p>
+        <h1 className="app-title">Hyli AMM Interface</h1>
+        <p className="app-subtitle">Privacy-preserving Automated Market Maker with ZK proofs</p>
       </div>
       <div className="wallet-info">
         <div className="wallet-address">
@@ -154,13 +163,13 @@ function ScaffoldApp() {
         onClick={sendBlobTx}
         disabled={loading}
       >
-        {loading ? 'SENDING...' : 'SEND BLOB TX'}
+        {loading ? 'MINTING TOKENS...' : 'MINT AMM TOKENS (Test)'}
       </button>
       {initialResult && <div className="result">{initialResult}</div>}
       {confirmationResult && <div className="result">{confirmationResult}</div>}
       <div className="contract-states">
         <div className="contract-state">
-          <h2>Contract 1 State</h2>
+          <h2>AMM Contract State (Contract 1)</h2>
           {contract1State?.error ? (
             <div className="error">{contract1State.error}</div>
           ) : (
@@ -168,7 +177,7 @@ function ScaffoldApp() {
           )}
         </div>
         <div className="contract-state">
-          <h2>Contract 2 State</h2>
+          <h2>Identity Contract State (Contract 2)</h2>
           {contract2State?.error ? (
             <div className="error">{contract2State.error}</div>
           ) : (
@@ -225,7 +234,6 @@ function App() {
                 duration: 24 * 60 * 60 * 1000, // Session key duration in ms (default: 72h)
                 whitelist: ["contract1", "contract2"], // Required: contracts allowed for session key
             }}
-            forceSessionKeyCreation={true} // Default: undefined, letting user decide
         >
             <AppContent />
         </WalletProvider>
