@@ -6,7 +6,6 @@ use sdk::RunResult;
 
 #[cfg(feature = "client")]
 pub mod client;
-// Temporarily disabled indexer module to avoid missing feature dpendency
 #[cfg(feature = "client")]
 pub mod indexer;
 

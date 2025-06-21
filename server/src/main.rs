@@ -8,7 +8,7 @@ use client_sdk::{
 };
 use conf::Conf;
 use contract1::Contract1;
-use contract2::Contract2;
+// Contract2 removed - will be replaced with Noir identity verification
 use hyle_modules::{
     bus::{metrics::BusMetrics, SharedMessageBus},
     modules::{
@@ -39,8 +39,9 @@ pub struct Args {
     #[arg(long, default_value = "contract1")]
     pub contract1_cn: String,
 
-    #[arg(long, default_value = "contract2")]
-    pub contract2_cn: String,
+    // Contract2 removed - will use Noir identity verification
+    // #[arg(long, default_value = "contract2")]
+    // pub contract2_cn: String,
 }
 
 #[tokio::main]
@@ -70,11 +71,7 @@ async fn main() -> Result<()> {
             program_id: contract1::client::tx_executor_handler::metadata::PROGRAM_ID,
             initial_state: Contract1::default().commit(),
         },
-        init::ContractInit {
-            name: args.contract2_cn.clone().into(),
-            program_id: contract2::client::tx_executor_handler::metadata::PROGRAM_ID,
-            initial_state: Contract2::default().commit(),
-        },
+        // Contract2 initialization removed - will be replaced with Noir contract
     ];
 
     match init::init_node(node_client.clone(), indexer_client.clone(), contracts).await {
@@ -99,7 +96,8 @@ async fn main() -> Result<()> {
         api: api_ctx.clone(),
         node_client,
         contract1_cn: args.contract1_cn.clone().into(),
-        contract2_cn: args.contract2_cn.clone().into(),
+        // Contract2 removed - Noir identity will be handled separately
+        contract2_cn: "zkpassport_identity".into(), // Placeholder for Noir contract
     });
 
     handler.build_module::<AppModule>(app_ctx.clone()).await?;
@@ -112,13 +110,14 @@ async fn main() -> Result<()> {
         })
         .await?;
 
-    handler
-        .build_module::<ContractStateIndexer<Contract2>>(ContractStateIndexerCtx {
-            contract_name: args.contract2_cn.clone().into(),
-            data_directory: config.data_directory.clone(),
-            api: api_ctx.clone(),
-        })
-        .await?;
+    // Contract2 indexer removed - Noir contracts handled differently
+    // handler
+    //     .build_module::<ContractStateIndexer<Contract2>>(ContractStateIndexerCtx {
+    //         contract_name: args.contract2_cn.clone().into(),
+    //         data_directory: config.data_directory.clone(),
+    //         api: api_ctx.clone(),
+    //     })
+    //     .await?;
 
     handler
         .build_module::<AutoProver<Contract1>>(Arc::new(AutoProverCtx {
@@ -132,17 +131,18 @@ async fn main() -> Result<()> {
         }))
         .await?;
 
-    handler
-        .build_module::<AutoProver<Contract2>>(Arc::new(AutoProverCtx {
-            data_directory: config.data_directory.clone(),
-            prover: Arc::new(Risc0Prover::new(contracts::CONTRACT2_ELF)),
-            contract_name: args.contract2_cn.clone().into(),
-            node: app_ctx.node_client.clone(),
-            default_state: Default::default(),
-            buffer_blocks: config.buffer_blocks,
-            max_txs_per_proof: config.max_txs_per_proof,
-        }))
-        .await?;
+    // Contract2 prover removed - Noir proofs handled separately
+    // handler
+    //     .build_module::<AutoProver<Contract2>>(Arc::new(AutoProverCtx {
+    //         data_directory: config.data_directory.clone(),
+    //         prover: Arc::new(Risc0Prover::new(contracts::CONTRACT2_ELF)),
+    //         contract_name: args.contract2_cn.clone().into(),
+    //         node: app_ctx.node_client.clone(),
+    //         default_state: Default::default(),
+    //         buffer_blocks: config.buffer_blocks,
+    //         max_txs_per_proof: config.max_txs_per_proof,
+    //     }))
+    //     .await?;
 
     // This module connects to the da_address and receives all the blocks²
     handler

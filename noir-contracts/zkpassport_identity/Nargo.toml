@@ -1,0 +1,6 @@
+[package]
+name = "zkpassport_identity"
+type = "bin"
+authors = [""]
+
+[dependencies]

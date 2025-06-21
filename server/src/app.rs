@@ -13,7 +13,7 @@ use client_sdk::{
     rest_client::{NodeApiClient, NodeApiHttpClient},
 };
 use contract1::{Contract1, Contract1Action};
-use contract2::Contract2Action;
+// Contract2 removed - will be replaced with Noir identity verification
 
 use hyle_modules::{
     bus::{BusClientReceiver, SharedMessageBus},
@@ -33,7 +33,7 @@ pub struct AppModuleCtx {
     pub api: Arc<BuildApiContextInner>,
     pub node_client: Arc<NodeApiHttpClient>,
     pub contract1_cn: ContractName,
-    pub contract2_cn: ContractName,
+    pub contract2_cn: ContractName, // Placeholder for future Noir integration
 }
 
 module_bus_client! {
@@ -50,7 +50,7 @@ impl Module for AppModule {
         let state = RouterCtx {
             bus: Arc::new(Mutex::new(bus.new_handle())),
             contract1_cn: ctx.contract1_cn.clone(),
-            contract2_cn: ctx.contract2_cn.clone(),
+            contract2_cn: ctx.contract2_cn.clone(), // Placeholder
             client: ctx.node_client.clone(),
         };
 
@@ -70,6 +70,7 @@ impl Module for AppModule {
             .route("/api/get-pool-reserves", post(get_pool_reserves))
             .route("/api/test-amm", post(test_amm))
             .route("/api/config", get(get_config))
+            // TODO: Add Noir identity verification endpoints
             .with_state(state)
             .layer(cors); // Apply CORS middleware
 
@@ -97,7 +98,7 @@ struct RouterCtx {
     pub bus: Arc<Mutex<SharedMessageBus>>,
     pub client: Arc<NodeApiHttpClient>,
     pub contract1_cn: ContractName,
-    pub contract2_cn: ContractName,
+    pub contract2_cn: ContractName, // Placeholder for Noir contract
 }
 
 async fn health() -> impl IntoResponse {
@@ -206,7 +207,8 @@ async fn mint_tokens(
         amount: request.amount,
     };
     
-    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+    // For now, only process AMM actions - Noir identity verification will be added later
+    send_amm_action_only(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn swap_tokens(
@@ -224,7 +226,8 @@ async fn swap_tokens(
         min_amount_out: request.min_amount_out,
     };
     
-    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+    // TODO: Add Noir identity verification for @zkpassport users
+    send_amm_action_only(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn add_liquidity(
@@ -242,7 +245,7 @@ async fn add_liquidity(
         amount_b: request.amount_b,
     };
     
-    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+    send_amm_action_only(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn remove_liquidity(
@@ -259,7 +262,7 @@ async fn remove_liquidity(
         liquidity_amount: request.liquidity_amount,
     };
     
-    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+    send_amm_action_only(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn get_user_balance(
@@ -274,7 +277,7 @@ async fn get_user_balance(
         token: request.token,
     };
     
-    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+    send_amm_action_only(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn get_pool_reserves(
@@ -289,7 +292,7 @@ async fn get_pool_reserves(
         token_b: request.token_b,
     };
     
-    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+    send_amm_action_only(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn test_amm(
@@ -306,7 +309,7 @@ async fn test_amm(
         amount: 1000,
     };
     
-    send_amm_action(ctx, auth, request.wallet_blobs, action_contract1).await
+    send_amm_action_only(ctx, auth, request.wallet_blobs, action_contract1).await
 }
 
 async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
@@ -315,7 +318,8 @@ async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
     })
 }
 
-async fn send_amm_action(
+// Simplified function for AMM-only actions (without identity verification for now)
+async fn send_amm_action_only(
     ctx: RouterCtx, 
     auth: AuthHeaders, 
     wallet_blobs: [Blob; 2],
@@ -323,17 +327,9 @@ async fn send_amm_action(
 ) -> Result<impl IntoResponse, AppError> {
     let identity = auth.user.clone();
 
-    // Identity verification: Check if user is allowed (not US citizen/resident)
-    let action_contract2 = Contract2Action::IsUserAllowed {
-        user: auth.user.clone(),
-    };
-
+    // For now, only send AMM blob - Noir identity verification will be added later
     let mut blobs = wallet_blobs.to_vec();
-
-    blobs.extend(vec![
-        amm_action.as_blob(ctx.contract1_cn.clone()),
-        action_contract2.as_blob(ctx.contract2_cn.clone()),
-    ]);
+    blobs.push(amm_action.as_blob(ctx.contract1_cn.clone()));
 
     let res = ctx
         .client

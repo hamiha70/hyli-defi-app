@@ -4,16 +4,16 @@ fn main() {}
 
 #[cfg(all(
     feature = "build",
-    not(any(feature = "contract1", feature = "contract2"))
+    not(feature = "contract1")
 ))]
 fn main() {
-    compile_error!("When the 'build' feature is enabled, at least one of the following features must also be enabled: all, contract1, contract2.");
+    compile_error!("When the 'build' feature is enabled, contract1 feature must also be enabled.");
 }
 
 #[cfg(all(
     not(clippy),
     feature = "build",
-    any(feature = "contract1", feature = "contract2",)
+    feature = "contract1"
 ))]
 fn main() {
     trait CodegenConsts {
@@ -60,10 +60,8 @@ fn main() {
     let manifest_dir = pkg.manifest_path.parent().unwrap();
 
     let methods: Vec<GuestListEntry> = [
-        #[cfg(feature = "contract1")]
         "contract1",
-        #[cfg(feature = "contract2")]
-        "contract2",
+        // contract2 removed - replaced with Noir identity verification
     ]
     .iter()
     .map(|name| {

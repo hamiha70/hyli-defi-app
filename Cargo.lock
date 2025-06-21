@@ -2447,7 +2447,6 @@ name = "contracts"
 version = "0.0.0"
 dependencies = [
  "contract1",
- "contract2",
  "hyle-contract-sdk",
  "risc0-build",
 ]

@@ -160,22 +160,39 @@ export const ZKPassportVerifier: React.FC<ZKPassportVerifierProps> = ({
       onProofGenerated((result) => {
         setProofCount(prev => {
           const newCount = prev + 1;
-          console.log(`🔐 Individual proof generated (${newCount}):`, { name, vkeyHash, version });
-          setCurrentStep(`Generated ${name} proof... (${newCount} proofs completed)`);
+          
+          // Extract proof details safely
+          const proofName = typeof result === 'object' && result && 'name' in result ? result.name : 'unknown';
+          const proofVkeyHash = typeof result === 'object' && result && 'vkeyHash' in result ? result.vkeyHash : 'unknown';
+          const proofVersion = typeof result === 'object' && result && 'version' in result ? result.version : 'unknown';
+          
+          console.log(`🔐 Individual proof generated (${newCount}):`, { 
+            name: proofName, 
+            vkeyHash: proofVkeyHash, 
+            version: proofVersion 
+          });
+          
+          // Add debug info for age-related proofs
+          if (proofName && typeof proofName === 'string' && proofName.toLowerCase().includes('age')) {
+            console.log('🎂 AGE PROOF DETECTED!', proofName);
+          }
+          
+          if (proofName && typeof proofName === 'string' && proofName.toLowerCase().includes('compare')) {
+            console.log('🔍 COMPARISON PROOF DETECTED!', proofName);
+          }
+          
+          // Show warning when we reach 3 proofs without completion
+          if (newCount === 3) {
+            setTimeout(() => {
+              setCurrentStep('⚠️ Proof generation may be stuck. If this persists, try refreshing and using a different passport/document.');
+            }, 30000); // Wait 30 seconds before showing warning
+          }
+          
+          setCurrentStep(`🔐 Proof generated (${newCount}/4). Please wait...`);
+          
           return newCount;
         });
-        console.log('🔐 Result:', result);    
-        
-        // Add debug info for age-related proofs
-        if (name && name.toLowerCase().includes('age')) {
-          console.log('🎯 AGE PROOF DETECTED:', name);
-        }
-        if (name && name.toLowerCase().includes('compare')) {
-          console.log('🎯 COMPARE PROOF DETECTED:', name);
-        }
-        
-        // Log all proof names to track what's missing
-        console.log('📋 All proofs so far:', name);
+        console.log('🔐 Result:', result);
       });
 
       onResult(({ uniqueIdentifier, verified, result }: any) => {
