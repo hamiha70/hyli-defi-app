@@ -261,6 +261,22 @@ function ScaffoldApp() {
     }
   };
 
+  // Auto-setup function for demo purposes
+  const handleAutoSetup = async () => {
+    setResult('🚀 Auto-setting up your DeFi paradise...');
+    
+    // Step 1: Mint all tokens
+    await handleMintAllTokens();
+    
+    // Small delay before pools
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Step 2: Initialize all pools
+    await handleInitializePools();
+    
+    setResult('✅ Auto-setup complete! Your DeFi AMM is ready for trading! 🎉');
+  };
+
   const handleSwap = async () => {
     if (!swapAmountIn || !swapTokenIn || !swapTokenOut) {
       setResult('Please fill in all swap fields');
@@ -407,6 +423,25 @@ function ScaffoldApp() {
           >
             {loading ? 'Creating Pools... 🌊' : 'Initialize Fruit Pools 🏊‍♂️'}
           </button>
+          <button 
+            className="auto-setup-btn"
+            onClick={handleAutoSetup}
+            disabled={loading}
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '12px 20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontSize: '14px',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {loading ? '🔄 Setting up...' : '🚀 Auto-Setup Demo'}
+          </button>
         </div>
         <div className="balance-grid">
           {availableTokens.map(token => {
@@ -434,71 +469,107 @@ function ScaffoldApp() {
     );
   };
 
-  const renderSwapInterface = () => (
-    <div className="swap-interface colorful-swap">
-      <h3>🌈 Magical Fruit Swap</h3>
-      <div className="fee-display rainbow-text">Fee: 0.3% ✨ | Real Exchange Rates 📊</div>
-      <div className="swap-container">
-        <div className="token-input-group colorful-input">
-          <label>From 🚀</label>
-          <div className="token-input">
-            <select 
-              value={swapTokenIn} 
-              onChange={(e) => setSwapTokenIn(e.target.value)}
-              disabled={loading}
-              style={{ borderColor: getTokenColor(swapTokenIn) }}
-            >
-              {availableTokens.map(token => (
-                <option key={token} value={token}>{getTokenEmoji(token)} {token}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="0.0"
-              value={swapAmountIn}
-              onChange={(e) => setSwapAmountIn(e.target.value)}
-              disabled={loading}
-              style={{ borderColor: getTokenColor(swapTokenIn) }}
-            />
+  const renderSwapInterface = () => {
+    // Check if user has sufficient balance for swap
+    const state = contract1State?.state as any;
+    const userBalances = state?.user_balances || {};
+    const userKey = currentUser.split('@')[0];
+    const currentBalance = userBalances[`${userKey}_${swapTokenIn}`] || 0;
+    const swapAmount = parseInt(swapAmountIn) || 0;
+    
+    const hasInsufficientBalance = swapAmount > 0 && currentBalance < swapAmount;
+    const hasZeroBalance = currentBalance === 0;
+    
+    return (
+      <div className="swap-interface colorful-swap">
+        <h3>🌈 Magical Fruit Swap</h3>
+        {hasZeroBalance && (
+          <div className="warning-message" style={{ 
+            background: '#fff3cd', 
+            border: '1px solid #ffeaa7', 
+            borderRadius: '8px', 
+            padding: '12px', 
+            margin: '10px 0',
+            color: '#856404'
+          }}>
+            ⚠️ You have 0 {swapTokenIn} tokens! Click "Harvest All Fruits" first to get started.
           </div>
-        </div>
-        
-        <div className="swap-arrow rainbow-arrow">⬇✨🔥</div>
-        
-        <div className="token-input-group colorful-input">
-          <label>To (after 0.3% fee) 🎯</label>
-          <div className="token-input">
-            <select 
-              value={swapTokenOut} 
-              onChange={(e) => setSwapTokenOut(e.target.value)}
-              disabled={loading}
-              style={{ borderColor: getTokenColor(swapTokenOut) }}
-            >
-              {availableTokens.filter(t => t !== swapTokenIn).map(token => (
-                <option key={token} value={token}>{getTokenEmoji(token)} {token}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="0.0"
-              value={swapAmountOut}
-              readOnly
-              className="estimated-output"
-              style={{ borderColor: getTokenColor(swapTokenOut), backgroundColor: `${getTokenColor(swapTokenOut)}11` }}
-            />
+        )}
+        {hasInsufficientBalance && !hasZeroBalance && (
+          <div className="error-message" style={{ 
+            background: '#f8d7da', 
+            border: '1px solid #f5c6cb', 
+            borderRadius: '8px', 
+            padding: '12px', 
+            margin: '10px 0',
+            color: '#721c24'
+          }}>
+            ❌ Insufficient {swapTokenIn} balance! You have {currentBalance.toLocaleString()}, need {swapAmount.toLocaleString()}.
           </div>
+        )}
+        <div className="fee-display rainbow-text">Fee: 0.3% ✨ | Real Exchange Rates 📊</div>
+        <div className="swap-container">
+          <div className="token-input-group colorful-input">
+            <label>From 🚀</label>
+            <div className="token-input">
+              <select 
+                value={swapTokenIn} 
+                onChange={(e) => setSwapTokenIn(e.target.value)}
+                disabled={loading}
+                style={{ borderColor: getTokenColor(swapTokenIn) }}
+              >
+                {availableTokens.map(token => (
+                  <option key={token} value={token}>{getTokenEmoji(token)} {token}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="0.0"
+                value={swapAmountIn}
+                onChange={(e) => setSwapAmountIn(e.target.value)}
+                disabled={loading}
+                style={{ borderColor: getTokenColor(swapTokenIn) }}
+              />
+            </div>
+          </div>
+          
+          <div className="swap-arrow rainbow-arrow">⬇✨🔥</div>
+          
+          <div className="token-input-group colorful-input">
+            <label>To (after 0.3% fee) 🎯</label>
+            <div className="token-input">
+              <select 
+                value={swapTokenOut} 
+                onChange={(e) => setSwapTokenOut(e.target.value)}
+                disabled={loading}
+                style={{ borderColor: getTokenColor(swapTokenOut) }}
+              >
+                {availableTokens.filter(t => t !== swapTokenIn).map(token => (
+                  <option key={token} value={token}>{getTokenEmoji(token)} {token}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="0.0"
+                value={swapAmountOut}
+                readOnly
+                className="estimated-output"
+                style={{ borderColor: getTokenColor(swapTokenOut), backgroundColor: `${getTokenColor(swapTokenOut)}11` }}
+              />
+            </div>
+          </div>
+          
+          <button 
+            className="action-button swap-button rainbow-swap-btn"
+            onClick={handleSwap}
+            disabled={loading || !swapAmountIn}
+          >
+            {loading ? 'Swapping Fruits... 🌪️' : 'Swap Magic Fruits ✨🔮'}
+          </button>
         </div>
-        
-        <button 
-          className="action-button swap-button rainbow-swap-btn"
-          onClick={handleSwap}
-          disabled={loading || !swapAmountIn}
-        >
-          {loading ? 'Swapping Fruits... 🌪️' : 'Swap Magic Fruits ✨🔮'}
-        </button>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderLiquidityInterface = () => (
     <div className="liquidity-interface colorful-liquidity">

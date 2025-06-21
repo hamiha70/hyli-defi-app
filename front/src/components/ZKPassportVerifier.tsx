@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ZKPassport } from '@zkpassport/sdk';
+import { ZKPassport, QueryBuilder } from '@zkpassport/sdk';
 import qrcode from 'qrcode';
 
 interface VerificationResult {
@@ -94,9 +94,10 @@ export const ZKPassportVerifier: React.FC<ZKPassportVerifierProps> = ({
         purpose: "Prove you are younger than 25 for DeFi trading compliance",
         scope: "hyli-amm-age-verification",
         devMode: true, // Enable dev mode for testing with mock proofs
+        mode: "compressed",
       });
       
-      const queryBuilder = await Promise.race([requestPromise, timeoutPromise]) as any;
+      const queryBuilder = await Promise.race([requestPromise, timeoutPromise]) as QueryBuilder;
       console.log('✅ Query builder created:', queryBuilder);
 
               setCurrentStep('Building age verification query...');
@@ -104,7 +105,7 @@ export const ZKPassportVerifier: React.FC<ZKPassportVerifierProps> = ({
 
         // Build the query - prove age >= 25, then we expect result to be FALSE (not 25+)
         // This maintains privacy without disclosing actual age
-        const queryResult = queryBuilder.gte("age", 25);
+        const queryResult = queryBuilder.lt("age", 26);
               console.log('✅ Query result after .gte():', queryResult);
         
         console.log('🔄 Calling .done() to finalize query...');
@@ -156,13 +157,14 @@ export const ZKPassportVerifier: React.FC<ZKPassportVerifierProps> = ({
         }, 30000); // 30 seconds warning
       });
 
-      onProofGenerated(({ vkeyHash, version, name }: any) => {
+      onProofGenerated((result) => {
         setProofCount(prev => {
           const newCount = prev + 1;
           console.log(`🔐 Individual proof generated (${newCount}):`, { name, vkeyHash, version });
           setCurrentStep(`Generated ${name} proof... (${newCount} proofs completed)`);
           return newCount;
         });
+        console.log('🔐 Result:', result);    
         
         // Add debug info for age-related proofs
         if (name && name.toLowerCase().includes('age')) {
