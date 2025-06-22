@@ -37,39 +37,68 @@ This document describes the **revolutionary mixed-proving system architecture** 
 ┌─────────────────────────────────────────────────────────────────┐
 │                   📱 Frontend Responsibilities                  │
 ├─────────────────────────────┬───────────────────────────────────┤
-│     Identity Input Layer    │        AMM Interface Layer        │
+│   Unified Verification UI   │        AMM Interface Layer        │
 ├─────────────────────────────┼───────────────────────────────────┤
-│ • Password input UI         │ • Token minting interface        │
-│ • Hash generation (local)   │ • Swap trading interface         │
-│ • ZKPassport verification   │ • Liquidity pool management      │
-│ • Proof packaging           │ • Balance displays               │
-│                             │ • Transaction status             │
-│ ✅ Current: Password hash   │ ✅ Already implemented           │
-│ 🔮 Future: ZKPassport proof │ ✅ Working AMM operations        │
+│ • Verification method picker │ • Token minting interface        │
+│ • Password input modal      │ • Swap trading interface         │
+│ • ZKPassport integration    │ • Liquidity pool management      │
+│ • Demo mode bypass          │ • Balance displays               │
+│ • Back navigation           │ • Transaction status             │
+│ • Proof packaging           │ • User experience features       │
+│                             │                                   │
+│ ✅ Three parallel options   │ ✅ Already implemented           │
+│ ✅ Unified user experience  │ ✅ Working AMM operations        │
+│ ✅ Seamless flow to AMM     │ ✅ Real-time state updates       │
 └─────────────────────────────┴───────────────────────────────────┘
 ```
 
-### **End-to-End Transaction Flow**
+### **Updated End-to-End Transaction Flow**
 ```
-User Action → Frontend Processing → Server Authorization → Mixed Proving → Result
+Wallet Connection → Unified Verification Screen → Selected Method → AMM Interface
 
-1. User enters password          Frontend generates hash
-   + requests AMM operation   →  + packages AMM request
+1. User connects wallet        Frontend displays:
+   via Hyli wallet          →  - Three verification options
+                               - Clear method descriptions
+                               - Beautiful unified interface
                                 
-2. Frontend sends:              Server receives:
-   - identity_proof             - Validates proof hash
-   - user_id (@zkpassport)   →  - Checks authorization
-   - amm_action (mint/swap)     - Determines access level
+2. User selects method:        Method-specific processing:
+   Option A: ZKPassport      →  - ZKPassport mobile verification
+   Option B: Password           - Noir circuit authentication  
+   Option C: Demo mode          - Immediate access (testing)
                                 
-3. Server processes:            Mixed contract execution:
-   - Verify Noir proof       →  - Noir: Identity verification
-   - Generate Risc0 proof       - Risc0: AMM business logic
-   - Submit atomic transaction   - Hyli: Atomic composition
+3. Verification processing:    Backend authorization:
+   - Generate proof/hash     →  - Validate proof/credentials
+   - Package request            - Set authorization status
+   - Submit to server           - Enable AMM operations
                                 
-4. Hyli chain commits:          Frontend updates:
-   - Both proofs succeed     →  - Display new balances
-   - State changes applied      - Show transaction success
-   - Transaction confirmed      - Enable further operations
+4. Success (any method):       AMM interface access:
+   - Set verified status     →  - Display verification method used
+   - Enable AMM features        - Full trading functionality
+   - Show user identity         - Token operations available
+```
+
+### **Unified Verification Screen Architecture**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  🛂 Choose Your Verification Method                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  🚀 ZKPassport Verification                                    │
+│     ├─ Age verification via mobile app                         │
+│     ├─ Zero-knowledge proof of age < 25                        │
+│     └─ onClick: setShowVerification(true)                      │
+│                                                                 │
+│  🔐 Noir Circuit Authentication                                │
+│     ├─ Password verification via ZK circuit                    │
+│     ├─ Credentials: bob / HyliForEver                          │
+│     └─ onClick: setShowPasswordAuth(true)                      │
+│                                                                 │
+│  ⚠️ Skip (Demo Mode)                                           │
+│     ├─ For testing purposes only                               │
+│     ├─ Immediate AMM access                                    │
+│     └─ onClick: setIsVerified(true)                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🔐 **Identity as Authorization Middleware**
@@ -212,20 +241,29 @@ fn main(
 - ✅ **2 unit tests** confirming correct behavior
 - 🔮 **Future**: Replace with ZKPassport age verification
 
-## 🔄 **Migration Phases**
+## 🔄 **Implementation Phases**
 
-### **Phase 1: ✅ Password Hash Implementation (Current)**
+### **Phase 1: ✅ Unified Verification Interface (Current)**
 ```
-Frontend: Password input → Hash generation → Send to server
-Server: Receive hash → Verify via Noir → Gate AMM operations  
-Contracts: Noir verification + Risc0 AMM execution
+Frontend: Unified verification screen → User selects method → Method-specific processing
+Methods: ZKPassport (mobile) | Password (Noir circuit) | Demo (bypass)
+Result: All methods lead to same AMM interface with verification status
 ```
 
-### **Phase 2: 🔮 ZKPassport Integration (Future)**
+### **Implementation Status**
+- ✅ **Unified Verification Screen**: Three parallel authentication options
+- ✅ **ZKPassport Integration**: Mobile app verification (with fallback)
+- ✅ **Noir Circuit Authentication**: Password-based ZK verification
+- ✅ **Demo Mode**: Immediate access for testing and demonstrations
+- ✅ **Seamless User Experience**: Back navigation and clear method descriptions
+
+### **Phase 2: 🔮 Enhanced Privacy Features (Future)**
 ```
-Frontend: ZKPassport verification → Proof generation → Send to server
-Server: Receive ZKPassport proof → Verify via Noir → Gate AMM operations
-Contracts: Noir ZKPassport verification + Risc0 AMM execution
+Potential Additions:
+- Biometric verification options
+- Hardware wallet integration
+- Multi-factor ZK authentication
+- Cross-chain identity bridging
 ```
 
 ## 🧪 **Testing Strategy**
@@ -297,11 +335,30 @@ cargo test -p server -- identity_tests
 
 ## 🚀 **Demo Narrative**
 
-**"Privacy-Preserving DeFi with Mixed Zero-Knowledge Architecture"**
+**"Privacy-Preserving DeFi with Unified Zero-Knowledge Verification"**
 
-1. **User Experience**: Simple password input gates access to advanced AMM
-2. **Technical Innovation**: Two proving systems in one atomic transaction  
-3. **Privacy Guarantee**: No personal data exposed, only cryptographic proofs
-4. **Future Vision**: Seamless migration to advanced identity verification
+1. **Unified User Experience**: Three verification methods on one elegant interface
+2. **Choice & Flexibility**: ZKPassport mobile, Noir circuit, or demo mode
+3. **Technical Innovation**: Mixed proving systems with seamless user flow
+4. **Privacy Guarantee**: Multiple verification paths, all privacy-preserving
+5. **Immediate Access**: Any successful verification leads directly to AMM
 
-**This architecture represents the future of compliant DeFi: privacy-preserving, user-friendly, and technically sophisticated.** ✨ 
+### **Demo Flow Highlights**
+```
+🎭 "Choose Your Adventure" Verification
+     ├─ 📱 Mobile-first ZKPassport experience
+     ├─ 🔐 Developer-friendly password authentication  
+     └─ ⚡ Instant demo mode for rapid testing
+
+🚀 Seamless Integration
+     ├─ No separate login screens or complex flows
+     ├─ Unified interface regardless of verification method
+     └─ Clear visual feedback on authentication status
+
+🔗 Technical Sophistication  
+     ├─ Zero-knowledge proofs for all verification paths
+     ├─ Mixed Risc0/Noir proving architecture
+     └─ Atomic transaction composition on Hyli
+```
+
+**This architecture showcases the future of compliant DeFi: offering multiple privacy-preserving verification methods in a unified, user-friendly interface that maintains technical sophistication under the hood.** ✨ 

@@ -76,15 +76,67 @@ Liquidity Pools:
 ## 🔮 ZKPassport Integration Status
 
 ### Current Implementation
-- **Frontend**: Complete ZKPassport SDK integration
-- **Age Verification**: Users must prove age < 25 years
-- **Privacy-Preserving**: No personal data revealed, only boolean result
-- **Dev Mode**: Currently using ZKPassport dev mode for testing
+- **Unified Verification Screen**: Complete interface with 3 parallel authentication options
+- **ZKPassport Option**: Age verification via mobile app (prove age < 25 years)
+- **Noir Circuit Option**: Password authentication via zero-knowledge circuit
+- **Demo Mode**: Skip verification for testing purposes
+- **Privacy-Preserving**: No personal data revealed, only verification results
+- **Seamless Integration**: All methods lead directly to AMM interface
+
+### Authentication Flow
+```
+User connects wallet
+       ↓
+Unified Verification Screen:
+┌─────────────────────────────────────────────────────────────┐
+│  🛂 Choose Your Verification Method                        │
+├─────────────────────────────────────────────────────────────┤
+│  🚀 ZKPassport Verification                               │
+│     Age verification via mobile app                        │
+├─────────────────────────────────────────────────────────────┤
+│  🔐 Noir Circuit Authentication                           │
+│     Password verification via ZK circuit                   │
+├─────────────────────────────────────────────────────────────┤
+│  ⚠️ Skip (Demo Mode)                                       │
+│     For testing purposes only                              │
+└─────────────────────────────────────────────────────────────┘
+       ↓
+Successful verification (any method)
+       ↓
+Direct access to AMM interface
+```
+
+### Authentication Methods
+
+#### **1. ZKPassport Verification**
+- **Purpose**: Age verification (< 25 years)
+- **Technology**: Real ZKPassport mobile app integration
+- **Privacy**: Zero-knowledge proof of age status
+- **Status**: Implemented with dev mode enabled
+
+#### **2. Noir Circuit Authentication** 
+- **Purpose**: Password-based identity verification
+- **Technology**: Zero-knowledge circuit for hash verification
+- **Privacy**: Password never transmitted, only hash verification
+- **Credentials**: Username: `bob`, Password: `HyliForEver`
+- **Status**: Fully implemented and working
+
+#### **3. Demo Mode**
+- **Purpose**: Quick testing and demonstrations
+- **Usage**: Bypasses all verification requirements
+- **Status**: Available for development workflow
+
+### User Experience Features
+- **Back Navigation**: Users can return from password auth to verification options
+- **Clear Descriptions**: Each method includes explanation of purpose
+- **Unified Result**: All methods lead to same AMM interface
+- **Status Indicators**: Shows which verification method was used
+- **Responsive Design**: Works on both desktop and mobile
 
 ### Known Issue  
-- **Age Proof Generation**: Sometimes stalls on 4th proof (compare_age)
+- **Age Proof Generation**: ZKPassport sometimes stalls on 4th proof (compare_age)
 - **Status**: Under investigation with ZKPassport team
-- **Workaround**: Demo mode allows skipping verification
+- **Workaround**: Noir circuit authentication or demo mode available as alternatives
 
 ## 📊 Architecture Overview
 

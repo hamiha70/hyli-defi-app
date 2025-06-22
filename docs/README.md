@@ -38,6 +38,13 @@
 - Hyli-specific transaction format requirements
 - Performance optimization strategies
 
+### **🔐 [Authentication Flow Guide](./Authentication-Flow-Guide.md)**
+**⭐ Unified verification system with multiple authentication methods**
+- Three parallel verification options (ZKPassport, Noir circuit, Demo)
+- Complete user flow documentation
+- Security considerations and privacy preservation
+- Implementation details and testing strategies
+
 ### **🤝 [Integration Architecture Guide](./LLM-Hyli-ZKPassport-Boundless.md)**
 **ZKPassport and Boundless integration strategy**
 - Multi-proof composition architecture
@@ -64,9 +71,10 @@
 ### **For Developers**
 1. **Start with**: [Development Workflow Guide](./Development-Workflow-Guide.md) - ⭐ **ESSENTIAL!** Daily development workflows
 2. **Overview**: [Current Status Summary](./Current-Status-Summary.md) - What's working and what's next
-3. **Debugging**: [Development Guide](./Development-Debugging-Guide.md) - Error solutions and troubleshooting
-4. **Architecture**: [AMM Architecture](./AMM-Contract-Architecture.md) - Understanding the contracts
-5. **Integration**: [Integration Guide](./LLM-Hyli-ZKPassport-Boundless.md) - ZKPassport integration
+3. **Authentication**: [Authentication Flow Guide](./Authentication-Flow-Guide.md) - ⭐ **NEW!** Unified verification system
+4. **Debugging**: [Development Guide](./Development-Debugging-Guide.md) - Error solutions and troubleshooting
+5. **Architecture**: [AMM Architecture](./AMM-Contract-Architecture.md) - Understanding the contracts
+6. **Integration**: [Integration Guide](./LLM-Hyli-ZKPassport-Boundless.md) - ZKPassport integration
 
 ### **For Troubleshooting**
 1. **Check**: [Development Guide](./Development-Debugging-Guide.md) - Common errors and solutions

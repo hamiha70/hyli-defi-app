@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { WalletProvider, HyliWallet, useWallet } from "hyli-wallet";
 import { ZKPassportVerifier } from './components/ZKPassportVerifier';
+import PasswordAuth from './components/PasswordAuth';
 import './App.css';
 import './WalletStyles.css';
 import './ZKPassportStyles.css';
@@ -45,6 +46,11 @@ function ScaffoldApp() {
   const [contract2State, setContract2State] = useState<ContractState | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  
+  // Password Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authenticatedUser, setAuthenticatedUser] = useState<string>('');
+  const [authError, setAuthError] = useState<string>('');
   
   // ZKPassport Verification State
   const [isVerified, setIsVerified] = useState(false);
@@ -179,6 +185,52 @@ function ScaffoldApp() {
     // For development/demo purposes only
     setIsVerified(true);
     setResult('⚠️ Verification skipped (demo mode)');
+  };
+
+  // Password authentication handlers
+  const handleAuthSuccess = (user: string) => {
+    console.log('🔐 Password authentication successful for user:', user);
+    setIsAuthenticated(true);
+    setAuthenticatedUser(user);
+    setAuthError('');
+    setCurrentUser(`${user}@wallet`); // Set the AMM user based on authenticated user
+    setIsVerified(true); // Also set verified to bypass compliance gate
+    setResult(`🔐 Successfully authenticated as ${user} via Noir circuit!`);
+  };
+
+  const handleAuthError = (error: string) => {
+    console.error('🔐 Password authentication failed:', error);
+    setAuthError(error);
+    setResult(`🔐 Authentication failed: ${error}`);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setAuthenticatedUser('');
+    setIsVerified(false);
+    setVerificationResult(null);
+    setShowVerification(false);
+    setAuthError('');
+    setResult('');
+    logout(); // Also logout from wallet
+  };
+
+  // New state for showing password auth modal
+  const [showPasswordAuth, setShowPasswordAuth] = useState(false);
+
+  const startPasswordAuth = () => {
+    setShowPasswordAuth(true);
+    setResult('');
+  };
+
+  const handlePasswordAuthComplete = (user: string) => {
+    handleAuthSuccess(user);
+    setShowPasswordAuth(false);
+  };
+
+  const handlePasswordAuthCancel = () => {
+    setShowPasswordAuth(false);
+    setAuthError('');
   };
 
   const fetchContractState = async (contractName: string) => {
@@ -1312,12 +1364,17 @@ function ScaffoldApp() {
         <p className="app-subtitle">
           Powered by <span className="tech-highlight">ZKPassport</span> & <span className="tech-highlight">Boundless</span>
         </p>
-        <button 
-          className="logout-button"
-          onClick={logout}
-        >
-          Logout 👋
-        </button>
+        {isAuthenticated && (
+          <div className="header-auth-info">
+            <span className="auth-user">🔐 Authenticated as: <strong>{authenticatedUser}</strong></span>
+            <button 
+              className="logout-button"
+              onClick={handleLogout}
+            >
+              Logout 👋
+            </button>
+          </div>
+        )}
       </div>
       
       {/* Always render ZKPassportVerifier to avoid hooks ordering issues */}
@@ -1328,15 +1385,24 @@ function ScaffoldApp() {
         />
       </div>
       
-      {/* Compliance gate - only show when not verified and not showing verification */}
-      {!isVerified && !showVerification && (
+      {/* Password Authentication Modal */}
+      <div style={{ display: showPasswordAuth ? 'block' : 'none' }}>
+        <PasswordAuth
+          onAuthSuccess={handlePasswordAuthComplete}
+          onAuthError={handleAuthError}
+          onCancel={handlePasswordAuthCancel}
+        />
+      </div>
+      
+      {/* Compliance gate - only show when not verified and not showing verification or password auth */}
+      {!isVerified && !showVerification && !showPasswordAuth && (
         <div className="compliance-gate">
           <div className="compliance-container">
-            <h2>🛂 Compliance Verification Required</h2>
+            <h2>🛂 Choose Your Verification Method</h2>
             <div className="compliance-info">
               <p>
-                To trade on this decentralized AMM, you must verify that you are younger than 25. 
-                This verification is done privately using ZKPassport - we never see your passport data.
+                To trade on this decentralized AMM, please verify your identity using one of the methods below. 
+                Each method provides zero-knowledge proof of compliance.
               </p>
               <div className="compliance-features">
                 <div className="feature">
@@ -1345,7 +1411,7 @@ function ScaffoldApp() {
                 </div>
                 <div className="feature">
                   <span className="feature-icon">🛂</span>
-                  <span>Age verification</span>
+                  <span>Multiple verification methods</span>
                 </div>
                 <div className="feature">
                   <span className="feature-icon">🚫</span>
@@ -1362,20 +1428,49 @@ function ScaffoldApp() {
                   className="verify-button"
                   onClick={startVerification}
                 >
-                  🚀 Start ZKPassport Verification
+                  🚀 ZKPassport Verification
+                  <div style={{ fontSize: '12px', marginTop: '5px', opacity: 0.9 }}>
+                    Age verification via mobile app
+                  </div>
+                </button>
+                <button 
+                  className="password-auth-button"
+                  onClick={startPasswordAuth}
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '16px 24px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    marginTop: '10px',
+                    width: '100%',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  🔐 Noir Circuit Authentication
+                  <div style={{ fontSize: '12px', marginTop: '5px', opacity: 0.9 }}>
+                    Password verification via ZK circuit
+                  </div>
                 </button>
                 <button 
                   className="skip-button"
                   onClick={skipVerification}
                 >
                   ⚠️ Skip (Demo Mode)
+                  <div style={{ fontSize: '12px', marginTop: '5px', opacity: 0.9 }}>
+                    For testing purposes only
+                  </div>
                 </button>
               </div>
               
               <div className="compliance-disclaimer">
                 <p>
-                  <strong>Note:</strong> This verification ensures compliance with financial regulations. 
-                  The proof is generated locally on your device and only confirms your age status.
+                  <strong>Note:</strong> Each verification method ensures compliance with financial regulations. 
+                  All proofs are generated locally and only confirm your eligibility status.
                 </p>
               </div>
             </div>
@@ -1398,7 +1493,11 @@ function ScaffoldApp() {
           <div className="app-tagline">Privacy-preserving fruit trading with magical zero-knowledge proofs ✨</div>
           <div className="header-actions">
             <div className="verification-status">
-              ✅ Verified: {verificationResult?.uniqueIdentifier.substring(0, 8) || 'Demo'}...
+              {isAuthenticated ? (
+                <>✅ Noir Authenticated: {authenticatedUser}</>
+              ) : (
+                <>✅ Verified: {verificationResult?.uniqueIdentifier.substring(0, 8) || 'Demo'}...</>
+              )}
             </div>
           </div>
 

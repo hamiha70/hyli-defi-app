@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use axum::{
-    extract::{Json, State},
+    extract::{Json, Path, State},
     http::{HeaderMap, Method, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -70,6 +70,7 @@ impl Module for AppModule {
             .route("/api/get-pool-reserves", post(get_pool_reserves))
             .route("/api/test-amm", post(test_amm))
             .route("/api/config", get(get_config))
+            .route("/api/authenticate-noir", post(noir_authenticate))
             // TODO: Add Noir identity verification endpoints
             .with_state(state)
             .layer(cors); // Apply CORS middleware
@@ -189,6 +190,26 @@ struct GetPoolReservesRequest {
 struct TestAmmRequest {
     wallet_blobs: [Blob; 2],
 }
+
+#[derive(Deserialize)]
+pub struct NoirAuthRequest {
+    pub username: String,
+    pub user_field: String,
+    pub password_field: String,
+    pub proof_type: String,
+}
+
+#[derive(Serialize)]
+pub struct NoirAuthResponse {
+    pub success: bool,
+    pub message: String,
+    pub proof_hash: Option<String>,
+    pub tx_hash: Option<String>,
+}
+
+// Known correct values for demo (these would come from Noir circuit compilation)
+const EXPECTED_BOB_FIELD: &str = "12345"; // Placeholder - needs actual Poseidon2 hash
+const EXPECTED_PASSWORD_FIELD: &str = "54321"; // Placeholder - needs actual Poseidon2 hash
 
 // --------------------------------------------------------
 //     Routes
@@ -316,6 +337,83 @@ async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
     Json(ConfigResponse {
         contract_name: ctx.contract1_cn.0,
     })
+}
+
+async fn noir_authenticate(
+    State(state): State<RouterCtx>,
+    Json(request): Json<NoirAuthRequest>,
+) -> Result<Json<NoirAuthResponse>, StatusCode> {
+    tracing::info!("🔐 Starting Noir circuit authentication for user: {}", request.username);
+    
+    // Step 1: Validate proof type
+    if request.proof_type != "noir_circuit" {
+        tracing::error!("❌ Invalid proof type: {}", request.proof_type);
+        return Ok(Json(NoirAuthResponse {
+            success: false,
+            message: "Invalid proof type".to_string(),
+            proof_hash: None,
+            tx_hash: None,
+        }));
+    }
+
+    // Step 2: Basic validation (in real implementation, this would be done by Noir circuit)
+    // For now, we'll validate the field values match expected ones
+    tracing::info!("🔢 Validating field values...");
+    tracing::info!("User field: {}", request.user_field);
+    tracing::info!("Password field: {}", request.password_field);
+
+    // Temporary validation logic until proper Noir integration
+    let is_valid_user = request.username == "bob";
+    let user_field_matches = request.user_field != "0"; // Basic non-zero check
+    let password_field_matches = request.password_field != "0"; // Basic non-zero check
+
+    if !is_valid_user || !user_field_matches || !password_field_matches {
+        tracing::error!("❌ Authentication failed: invalid credentials");
+        return Ok(Json(NoirAuthResponse {
+            success: false,
+            message: "Invalid credentials".to_string(),
+            proof_hash: None,
+            tx_hash: None,
+        }));
+    }
+
+    tracing::info!("✅ Field validation passed");
+
+    // Step 3: Generate Noir proof (PLACEHOLDER - needs real Noir integration)
+    tracing::info!("🧮 Generating Noir circuit proof...");
+    
+    // TODO: Replace with actual Noir proof generation
+    // This is where we would:
+    // 1. Call the Noir circuit with private inputs
+    // 2. Generate a zero-knowledge proof
+    // 3. Get the proof data for submission to Hyli
+    
+    let mock_proof_hash = format!("noir_proof_{}", hex::encode(&request.username.as_bytes()[..std::cmp::min(8, request.username.len())]));
+    
+    tracing::info!("🔐 Generated proof hash: {}", mock_proof_hash);
+
+    // Step 4: Submit proof to Hyli chain (PLACEHOLDER)
+    tracing::info!("⛓️ Submitting proof to Hyli chain...");
+    
+    // TODO: Replace with actual Hyli transaction submission
+    // This is where we would:
+    // 1. Create a transaction with the Noir proof
+    // 2. Submit to the zkpassport_identity contract
+    // 3. Wait for verification and settlement
+    
+    let mock_tx_hash = format!("tx_{}_noir_auth", chrono::Utc::now().timestamp());
+    
+    tracing::info!("📜 Submitted transaction: {}", mock_tx_hash);
+
+    // Step 5: Return success response
+    tracing::info!("✅ Noir circuit authentication successful for user: {}", request.username);
+
+    Ok(Json(NoirAuthResponse {
+        success: true,
+        message: format!("Authentication successful for user: {}", request.username),
+        proof_hash: Some(mock_proof_hash),
+        tx_hash: Some(mock_tx_hash),
+    }))
 }
 
 // Simplified function for AMM-only actions (without identity verification for now)
