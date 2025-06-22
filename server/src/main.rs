@@ -29,6 +29,8 @@ use tracing::error;
 mod app;
 mod conf;
 mod init;
+mod noir_verifier; // New Noir verification module
+mod noir_prover;   // New Noir proof generation module
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use axum::{
-    extract::{Json, Path, State},
+    extract::{Json, State},
     http::{HeaderMap, Method, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -25,6 +25,10 @@ use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 
+// Import new Noir modules
+use crate::noir_prover::NoirProver;
+use crate::noir_verifier::{NoirVerifier, NoirVerifierCtx};
+
 pub struct AppModule {
     bus: AppModuleBusClient,
 }
@@ -33,7 +37,7 @@ pub struct AppModuleCtx {
     pub api: Arc<BuildApiContextInner>,
     pub node_client: Arc<NodeApiHttpClient>,
     pub contract1_cn: ContractName,
-    pub contract2_cn: ContractName, // Placeholder for future Noir integration
+    pub contract2_cn: ContractName, // Placeholder for Noir contract integration
 }
 
 module_bus_client! {
@@ -52,6 +56,12 @@ impl Module for AppModule {
             contract1_cn: ctx.contract1_cn.clone(),
             contract2_cn: ctx.contract2_cn.clone(), // Placeholder
             client: ctx.node_client.clone(),
+            // Initialize Noir integration components
+            noir_prover: Arc::new(NoirProver::new("../noir-contracts/zkpassport_identity".to_string())),
+            noir_verifier: Arc::new(NoirVerifier::new(NoirVerifierCtx {
+                contract_name: ctx.contract2_cn.clone(),
+                node_client: ctx.node_client.clone(),
+            })),
         };
 
         // Create CORS middleware
@@ -71,7 +81,7 @@ impl Module for AppModule {
             .route("/api/test-amm", post(test_amm))
             .route("/api/config", get(get_config))
             .route("/api/authenticate-noir", post(noir_authenticate))
-            // TODO: Add Noir identity verification endpoints
+            .route("/api/noir-stats", get(get_noir_stats)) // New endpoint for verification stats
             .with_state(state)
             .layer(cors); // Apply CORS middleware
 
@@ -100,6 +110,8 @@ struct RouterCtx {
     pub client: Arc<NodeApiHttpClient>,
     pub contract1_cn: ContractName,
     pub contract2_cn: ContractName, // Placeholder for Noir contract
+    pub noir_prover: Arc<NoirProver>,    // Real Noir proof generator
+    pub noir_verifier: Arc<NoirVerifier>, // Real Noir proof verifier
 }
 
 async fn health() -> impl IntoResponse {
@@ -339,11 +351,16 @@ async fn get_config(State(ctx): State<RouterCtx>) -> impl IntoResponse {
     })
 }
 
+async fn get_noir_stats(State(ctx): State<RouterCtx>) -> impl IntoResponse {
+    let stats = ctx.noir_verifier.get_verification_stats().await;
+    Json(stats)
+}
+
 async fn noir_authenticate(
     State(state): State<RouterCtx>,
     Json(request): Json<NoirAuthRequest>,
 ) -> Result<Json<NoirAuthResponse>, StatusCode> {
-    tracing::info!("🔐 Starting Noir circuit authentication for user: {}", request.username);
+    tracing::info!("🔐 Starting real Noir authentication for user: {}", request.username);
     
     // Step 1: Validate proof type
     if request.proof_type != "noir_circuit" {
@@ -356,63 +373,84 @@ async fn noir_authenticate(
         }));
     }
 
-    // Step 2: Basic validation (in real implementation, this would be done by Noir circuit)
-    // For now, we'll validate the field values match expected ones
-    tracing::info!("🔢 Validating field values...");
-    tracing::info!("User field: {}", request.user_field);
-    tracing::info!("Password field: {}", request.password_field);
-
-    // Temporary validation logic until proper Noir integration
-    let is_valid_user = request.username == "bob";
-    let user_field_matches = request.user_field != "0"; // Basic non-zero check
-    let password_field_matches = request.password_field != "0"; // Basic non-zero check
-
-    if !is_valid_user || !user_field_matches || !password_field_matches {
-        tracing::error!("❌ Authentication failed: invalid credentials");
+    // Step 2: Ensure Noir circuit is compiled and ready
+    if let Err(e) = state.noir_prover.ensure_circuit_compiled().await {
+        tracing::error!("❌ Circuit compilation failed: {}", e);
         return Ok(Json(NoirAuthResponse {
             success: false,
-            message: "Invalid credentials".to_string(),
+            message: "Circuit compilation failed".to_string(),
             proof_hash: None,
             tx_hash: None,
         }));
     }
 
-    tracing::info!("✅ Field validation passed");
+    // Step 3: Generate real Noir proof
+    tracing::info!("🧮 Generating real UltraHonk proof...");
+    let proof = match state.noir_prover.generate_password_proof(
+        &request.username,
+        "HyliForEver" // Using fixed password for demo - in production this would be derived from request
+    ).await {
+        Ok(proof) => proof,
+        Err(e) => {
+            tracing::error!("❌ Proof generation failed: {}", e);
+            return Ok(Json(NoirAuthResponse {
+                success: false,
+                message: format!("Proof generation failed: {}", e),
+                proof_hash: None,
+                tx_hash: None,
+            }));
+        }
+    };
 
-    // Step 3: Generate Noir proof (PLACEHOLDER - needs real Noir integration)
-    tracing::info!("🧮 Generating Noir circuit proof...");
-    
-    // TODO: Replace with actual Noir proof generation
-    // This is where we would:
-    // 1. Call the Noir circuit with private inputs
-    // 2. Generate a zero-knowledge proof
-    // 3. Get the proof data for submission to Hyli
-    
-    let mock_proof_hash = format!("noir_proof_{}", hex::encode(&request.username.as_bytes()[..std::cmp::min(8, request.username.len())]));
-    
-    tracing::info!("🔐 Generated proof hash: {}", mock_proof_hash);
+    // Step 4: Verify proof locally before chain submission
+    tracing::info!("🔍 Verifying proof locally...");
+    let is_valid = match state.noir_verifier.verify_proof_locally(&proof).await {
+        Ok(valid) => valid,
+        Err(e) => {
+            tracing::error!("❌ Local verification failed: {}", e);
+            return Ok(Json(NoirAuthResponse {
+                success: false,
+                message: format!("Local verification failed: {}", e),
+                proof_hash: None,
+                tx_hash: None,
+            }));
+        }
+    };
 
-    // Step 4: Submit proof to Hyli chain (PLACEHOLDER)
-    tracing::info!("⛓️ Submitting proof to Hyli chain...");
-    
-    // TODO: Replace with actual Hyli transaction submission
-    // This is where we would:
-    // 1. Create a transaction with the Noir proof
-    // 2. Submit to the zkpassport_identity contract
-    // 3. Wait for verification and settlement
-    
-    let mock_tx_hash = format!("tx_{}_noir_auth", chrono::Utc::now().timestamp());
-    
-    tracing::info!("📜 Submitted transaction: {}", mock_tx_hash);
+    if !is_valid {
+        tracing::error!("❌ Proof verification failed - invalid proof");
+        return Ok(Json(NoirAuthResponse {
+            success: false,
+            message: "Proof verification failed".to_string(),
+            proof_hash: None,
+            tx_hash: None,
+        }));
+    }
 
-    // Step 5: Return success response
-    tracing::info!("✅ Noir circuit authentication successful for user: {}", request.username);
+    // Step 5: Submit proof to Hyli chain
+    tracing::info!("⛓️ Submitting verified proof to Hyli chain...");
+    let user_identity = format!("{}@zkpassport", request.username);
+    let tx_hash = match state.noir_verifier.submit_proof_to_chain(proof.clone(), user_identity).await {
+        Ok(hash) => hash,
+        Err(e) => {
+            tracing::error!("❌ Chain submission failed: {}", e);
+            return Ok(Json(NoirAuthResponse {
+                success: false,
+                message: format!("Chain submission failed: {}", e),
+                proof_hash: None,
+                tx_hash: None,
+            }));
+        }
+    };
+
+    let proof_hash = hex::encode(&proof.proof_data[..std::cmp::min(32, proof.proof_data.len())]);
+    tracing::info!("✅ Real Noir authentication successful for user: {}", request.username);
 
     Ok(Json(NoirAuthResponse {
         success: true,
-        message: format!("Authentication successful for user: {}", request.username),
-        proof_hash: Some(mock_proof_hash),
-        tx_hash: Some(mock_tx_hash),
+        message: format!("Real Noir authentication successful for user: {}", request.username),
+        proof_hash: Some(proof_hash),
+        tx_hash: Some(tx_hash),
     }))
 }
 
